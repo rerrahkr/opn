@@ -1,14 +1,17 @@
-#include "PluginEditor.h"
+// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-FileCopyrightText: 2023 Rerrah
+// Original source comes from JUCE Git repository:
+// JUCE/examples/CMake/AudioPlugin/PluginEditor.cpp
 
-#include "PluginProcessor.h"
+#include "plugin_editor.h"
+
+#include "plugin_processor.h"
 
 //==============================================================================
 PluginEditor::PluginEditor(PluginProcessor& p)
-    : AudioProcessorEditor(&p), processorRef(p) {
-  juce::ignoreUnused(processorRef);
-  // Make sure that before the constructor has finished, you've set the
-  // editor's size to whatever you need it to be.
+    : AudioProcessorEditor(&p), processor_(p) {
   setSize(400, 300);
+  resized();
 }
 
 PluginEditor::~PluginEditor() {}
@@ -19,11 +22,6 @@ void PluginEditor::paint(juce::Graphics& g) {
   // solid colour)
   g.fillAll(
       getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-
-  g.setColour(juce::Colours::white);
-  g.setFont(15.0f);
-  g.drawFittedText("Hello World!", getLocalBounds(),
-                   juce::Justification::centred, 1);
 }
 
 void PluginEditor::resized() {

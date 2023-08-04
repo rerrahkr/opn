@@ -1,6 +1,12 @@
-#include "PluginProcessor.h"
+// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-FileCopyrightText: 2023 Rerrah
+// Original source comes from JUCE Git repository:
+// JUCE/examples/CMake/AudioPlugin/PluginProcessor.cpp
 
-#include "PluginEditor.h"
+#include "plugin_processor.h"
+
+#include "audio/fm_audio_source.h"
+#include "plugin_editor.h"
 
 //==============================================================================
 PluginProcessor::PluginProcessor()
@@ -13,6 +19,7 @@ PluginProcessor::PluginProcessor()
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
       ) {
+  audioSource_ = std::make_unique<audio::FmAudioSource>();
 }
 
 PluginProcessor::~PluginProcessor() {}
@@ -70,14 +77,19 @@ void PluginProcessor::changeProgramName(int index,
 
 //==============================================================================
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-  // Use this method as the place to do any pre-playback
-  // initialisation that you need..
-  juce::ignoreUnused(sampleRate, samplesPerBlock);
+  audioSource_->prepareToPlay(samplesPerBlock, sampleRate);
+
+  resampler_ = std::make_unique<juce::ResamplingAudioSource>(
+      audioSource_.get(), false, getMainBusNumOutputChannels());
+  const auto synrate = audioSource_->synthesisRate();
+  const auto ratio = synrate / sampleRate;
+  resampler_->setResamplingRatio(ratio);
+  resampler_->prepareToPlay(samplesPerBlock, sampleRate);
 }
 
 void PluginProcessor::releaseResources() {
-  // When playback stops, you can use this as an opportunity to free up any
-  // spare memory, etc.
+  audioSource_->releaseResources();
+  resampler_->releaseResources();
 }
 
 bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
@@ -105,32 +117,43 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                    juce::MidiBuffer& midiMessages) {
-  juce::ignoreUnused(midiMessages);
-
   juce::ScopedNoDenormals noDenormals;
-  auto totalNumInputChannels = getTotalNumInputChannels();
-  auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-  // In case we have more outputs than inputs, this code clears any output
-  // channels that didn't contain input data, (because these aren't
-  // guaranteed to be empty - they may contain garbage).
-  // This is here to avoid people getting screaming feedback
-  // when they first compile a plugin, but obviously you don't need to keep
-  // this code if your algorithm always overwrites all the output channels.
-  for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-    buffer.clear(i, 0, buffer.getNumSamples());
+  buffer.clear(0, buffer.getNumSamples());
 
-  // This is the place where you'd normally do the guts of your plugin's
-  // audio processing...
-  // Make sure to reset the state if your inner loop is processing
-  // the samples and the outer loop is handling the channels.
-  // Alternatively, you can process the samples with the channels
-  // interleaved by keeping the same state.
-  for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-    auto* channelData = buffer.getWritePointer(channel);
-    juce::ignoreUnused(channelData);
-    // ..do something to the data...
+  if (!resampler_) {
+    return;
   }
+
+  int sampleStartPosition{};
+
+  // Fill buffer considering MIDI events.
+  for (auto iter = midiMessages.begin(); iter != midiMessages.end();) {
+    const int position = (*iter).samplePosition;
+
+    // Try to change a state of audio source.
+    if (!audioSource_->tryMidiMessageReservation((*iter++).getMessage())) {
+      continue;
+    }
+
+    if (iter != midiMessages.end() && (*iter).samplePosition == position) {
+      // Continue to read next event which is placed at the same position.
+      continue;
+    }
+
+    juce::AudioSourceChannelInfo channelInfo(&buffer, sampleStartPosition,
+                                             position - sampleStartPosition);
+    resampler_->getNextAudioBlock(channelInfo);
+    sampleStartPosition = position;
+
+    audioSource_->triggerReservedMidiMessages();
+  }
+
+  // Fill a rest of buffer.
+  juce::AudioSourceChannelInfo channelInfo(
+      &buffer, sampleStartPosition,
+      buffer.getNumSamples() - sampleStartPosition);
+  resampler_->getNextAudioBlock(channelInfo);
 }
 
 //==============================================================================
@@ -162,3 +185,5 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes) {
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
   return new PluginProcessor();
 }
+
+//==============================================================================

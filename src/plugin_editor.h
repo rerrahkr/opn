@@ -1,6 +1,13 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-FileCopyrightText: 2023 Rerrah
+// Original source comes from JUCE Git repository:
+// JUCE/examples/CMake/AudioPlugin/PluginEditor.h
+
 #pragma once
 
-#include "PluginProcessor.h"
+#include <memory>
+
+#include "plugin_processor.h"
 
 //==============================================================================
 class PluginEditor : public juce::AudioProcessorEditor {
@@ -15,7 +22,7 @@ class PluginEditor : public juce::AudioProcessorEditor {
  private:
   // This reference is provided as a quick way for your editor to
   // access the processor object that created it.
-  PluginProcessor& processorRef;
+  PluginProcessor& processor_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

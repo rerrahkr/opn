@@ -1,6 +1,17 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-FileCopyrightText: 2023 Rerrah
+// Original source comes from JUCE Git repository:
+// JUCE/examples/CMake/AudioPlugin/PluginProcessor.h
+
 #pragma once
 
 #include <JuceHeader.h>
+
+#include <memory>
+
+namespace audio {
+class FmAudioSource;
+}
 
 //==============================================================================
 class PluginProcessor : public juce::AudioProcessor {
@@ -44,5 +55,12 @@ class PluginProcessor : public juce::AudioProcessor {
 
  private:
   //==============================================================================
+
+  /// Audio source.
+  std::unique_ptr<audio::FmAudioSource> audioSource_;
+
+  /// Resampler.
+  std::unique_ptr<juce::ResamplingAudioSource> resampler_;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

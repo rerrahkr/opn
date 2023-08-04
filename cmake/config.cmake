@@ -1,0 +1,7 @@
+function(get_compile_flags FLAGS)
+if(MSVC)
+    list(APPEND FLAGS /O2 /Wall /WX /utf-8 /D_CRT_SECURE_NO_WARNINGS)
+else()
+    list(APPEND FLAGS -O2 -Wall -Wextra -Werror -pedantic -pedantic-errors)
+endif()
+endfunction()
