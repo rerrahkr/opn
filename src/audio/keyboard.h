@@ -56,6 +56,12 @@ class Keyboard {
   std::set<std::size_t> usedAssignIds() const;
 
   /**
+   * @brief Get information of notes which is note-on.
+   * @return A list of assignment information which notes are note-on.
+   */
+  std::deque<NoteAssignment> noteOns() const noexcept { return noteOnQueue_; }
+
+  /**
    * @brief Try note on.
    * @param[in] note A note to try note-on.
    * @return A list of assignment infomation which should be note-on or off.

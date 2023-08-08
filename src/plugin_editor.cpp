@@ -5,11 +5,28 @@
 
 #include "plugin_editor.h"
 
+#include "controller.h"
+#include "model.h"
 #include "plugin_processor.h"
+#include "ui/nestable_grid.h"
+#include "ui/view_message.h"
 
 //==============================================================================
-PluginEditor::PluginEditor(PluginProcessor& p)
-    : AudioProcessorEditor(&p), processor_(p) {
+PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
+                           const EditorState& model,
+                           juce::AudioProcessorValueTreeState& parameters)
+    : AudioProcessorEditor(&processor), controller_(controller), model_(model) {
+  {
+    pitchBendSensitivitySlider_ = std::make_unique<juce::Slider>(
+        juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
+    pitchBendSensitivitySliderAttachment_ = std::make_unique<SliderAttachment>(
+        parameters,
+        plugin_parameter::idAsString(
+            plugin_parameter::Type::PitchBendSensitivity),
+        *pitchBendSensitivitySlider_);
+    addAndMakeVisible(pitchBendSensitivitySlider_.get());
+  }
+
   setSize(400, 300);
   resized();
 }
@@ -18,13 +35,12 @@ PluginEditor::~PluginEditor() {}
 
 //==============================================================================
 void PluginEditor::paint(juce::Graphics& g) {
-  // (Our component is opaque, so we must completely fill the background with a
-  // solid colour)
   g.fillAll(
       getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
 void PluginEditor::resized() {
-  // This is generally where you'll want to lay out the positions of any
-  // subcomponents in your editor..
+  pitchBendSensitivitySlider_->setBounds(0, 0, 120, 20);
 }
+
+void PluginEditor::actionListenerCallback(const String& /*message*/) {}

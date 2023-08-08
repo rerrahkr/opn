@@ -5,8 +5,53 @@
 
 #include "plugin_processor.h"
 
+#include <unordered_map>
+#include <utility>
+
 #include "audio/fm_audio_source.h"
+#include "audio/pitch_util.h"
+#include "controller.h"
+#include "model.h"
 #include "plugin_editor.h"
+
+/**
+ * @brief Utilities for plugin parameter.
+ */
+namespace plugin_parameter {
+namespace {
+const std::unordered_map<Type, std::pair<juce::ParameterID, juce::String>>
+    kIdNameLookUp_ = {
+        {Type::PitchBendSensitivity,
+         {"pitchBendSensitivity", "Pitch Bend Sensitivity"}},
+};
+}
+
+juce::ParameterID id(Type type) { return kIdNameLookUp_.at(type).first; }
+
+juce::String idAsString(Type type) {
+  return kIdNameLookUp_.at(type).first.getParamID();
+}
+
+juce::String name(Type type) { return kIdNameLookUp_.at(type).second; }
+}  // namespace plugin_parameter
+
+//==============================================================================
+namespace {
+/// Default pitch bend sensitivity.
+constexpr std::uint8_t kDefaultPitchBendSensitivity{2};
+
+juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
+  juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+  layout.add(std::make_unique<juce::AudioParameterInt>(
+      plugin_parameter::id(plugin_parameter::Type::PitchBendSensitivity),
+      plugin_parameter::name(plugin_parameter::Type::PitchBendSensitivity), 1,
+      audio::pitch_util::kMaxPitchBendSensitivity,
+      kDefaultPitchBendSensitivity));
+
+  return layout;
+}
+}  // namespace
 
 //==============================================================================
 PluginProcessor::PluginProcessor()
@@ -18,8 +63,11 @@ PluginProcessor::PluginProcessor()
 #endif
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
-      ) {
-  audioSource_ = std::make_unique<audio::FmAudioSource>();
+              ),
+      model_(std::make_shared<Model>()),
+      parameters_(*this, nullptr, "PARAMETERS", createParameterLayout()),
+      controller_(std::make_shared<Controller>(model_, *this)),
+      audioSource_(std::make_unique<audio::FmAudioSource>()) {
 }
 
 PluginProcessor::~PluginProcessor() {}
@@ -121,6 +169,12 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
   buffer.clear(0, buffer.getNumSamples());
 
+  audioSource_->tryReservePitchBendSensitivityChange(
+      static_cast<int>(parameters_
+                           .getRawParameterValue(plugin_parameter::idAsString(
+                               plugin_parameter::Type::PitchBendSensitivity))
+                           ->load()));
+
   if (!resampler_) {
     return;
   }
@@ -132,7 +186,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     const int position = (*iter).samplePosition;
 
     // Try to change a state of audio source.
-    if (!audioSource_->tryMidiMessageReservation((*iter++).getMessage())) {
+    if (!audioSource_->tryReserveChangeFromMidiMessage(
+            (*iter++).getMessage())) {
       continue;
     }
 
@@ -146,7 +201,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     resampler_->getNextAudioBlock(channelInfo);
     sampleStartPosition = position;
 
-    audioSource_->triggerReservedMidiMessages();
+    audioSource_->triggerReservedChanges();
   }
 
   // Fill a rest of buffer.
@@ -162,7 +217,7 @@ bool PluginProcessor::hasEditor() const {
 }
 
 juce::AudioProcessorEditor* PluginProcessor::createEditor() {
-  return new PluginEditor(*this);
+  return new PluginEditor(*this, *controller_, *model_, parameters_);
 }
 
 //==============================================================================

@@ -6,6 +6,8 @@
 #include <limits>
 #include <numeric>
 
+#include "pitch_util.h"
+
 namespace audio {
 namespace {
 /**
@@ -49,20 +51,49 @@ constexpr std::uint8_t kNoteOnChannelTable[kMaxChannelCount]{
 constexpr std::size_t kDefaultPolyphony{kMaxChannelCount};
 
 /**
- * @brief Calculate Block and F-Number.
- * @param[in] noteNumber Note number.
+ * @brief Calculate F-Number of givien frequency.
+ * @param[in] hz Frequency.
+ * @return F-Number.
+ */
+auto calculateFNumber(double hz) {
+  return static_cast<std::uint16_t>(
+      std::round(hz * 2304. / (kChipClockHz >> 13)));
+}
+
+/**
+ * @brief Calculate Block and F-Number from cent.
+ * @param[in] cent Cent from MIDI note number 0.
  * @return 2 bytes data which contains Block and F-Number.
  */
-std::uint16_t calculateFNumberAndBlock(int noteNumber) {
-  constexpr int kC4Number{60}, kSemitoneCountInOctave{12};
-  const int block = noteNumber / kSemitoneCountInOctave - 1;
-  const int noteNumberInOctave = noteNumber % kSemitoneCountInOctave;
-  const double baseHz =
-      juce::MidiMessage::getMidiNoteInHertz(kC4Number + noteNumberInOctave);
-  const auto baseFNum = static_cast<std::uint16_t>(
-      std::round(baseHz * 2304. / (kChipClockHz >> 13)));
+std::uint16_t calculateFNumberAndBlockFromCent(int cent) {
+  constexpr int kC4Cent = pitch_util::kC4NoteNumber * pitch_util::kSemitoneCent;
+  constexpr int kOctaveCent =
+      pitch_util::kSemitoneCountInOctave * pitch_util::kSemitoneCent;
+  const int block = cent / kOctaveCent - 1;
+  const int centInOctave = cent % kOctaveCent;
+
+  const double baseHz = pitch_util::calculateHzFromCent(kC4Cent + centInOctave);
+  const auto baseFNum = calculateFNumber(baseHz);
+
   return (static_cast<std::uint8_t>(block) << 11) | baseFNum;
 }
+
+// /**
+//  * @brief Calculate Block and F-Number from MIDI note number.
+//  * @param[in] noteNumber Note number.
+//  * @return 2 bytes data which contains Block and F-Number.
+//  */
+// std::uint16_t calculateFNumberAndBlockFromNoteNumber(int noteNumber) {
+//   const int block = noteNumber / pitch_util::kSemitoneCountInOctave - 1;
+//   const int noteNumberInOctave =
+//       noteNumber % pitch_util::kSemitoneCountInOctave;
+
+//   const double baseHz = juce::MidiMessage::getMidiNoteInHertz(
+//       pitch_util::kC4NoteNumber + noteNumberInOctave);
+//   const auto baseFNum = calculateFNumber(baseHz);
+
+//   return (static_cast<std::uint8_t>(block) << 11) | baseFNum;
+// }
 }  // namespace
 
 FmAudioSource::FmAudioSource() : keyboard_(kDefaultPolyphony) {
@@ -78,17 +109,21 @@ void FmAudioSource::prepareToPlay(int samplesPerBlockExpected,
                                   double /*sampleRate*/) {
   ym2608_->reset();
 
-  // Initialize interruption / YM2608 mode
-  reservedChanges_.emplace_back(0x29, 0x80);
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+
+    // Initialize interruption / YM2608 mode
+    reservedChanges_.emplace_back(0x29, 0x80);
+  }
 
   setTone();
 
-  triggerReservedMidiMessages();
+  triggerReservedChanges();
 
   outputDataBuffer_.resize(samplesPerBlockExpected);
-}
 
-void FmAudioSource::releaseResources() {}
+  rpnDetector_.reset();
+}
 
 void FmAudioSource::getNextAudioBlock(
     const juce::AudioSourceChannelInfo& bufferToFill) {
@@ -127,9 +162,45 @@ void FmAudioSource::getNextAudioBlock(
   }
 }
 
-bool FmAudioSource::tryMidiMessageReservation(
+// [Changes] -------------------------------------------------------------------
+bool FmAudioSource::tryReservePitchBendSensitivityChange(int value) {
+  if (pitchBendSensitivity_.load() == value) {
+    return false;
+  }
+
+  pitchBendSensitivity_.store(static_cast<std::uint8_t>(value));
+
+  return reservePitchChange();
+}
+
+bool FmAudioSource::tryReserveChangeFromMidiMessage(
     const juce::MidiMessage& message) {
   DBG(message.getDescription());
+
+  if (message.isController()) {
+    // Check pitch bend sensitivity.
+    const auto parseResult = rpnDetector_.tryParse(
+        message.getChannel(), message.getControllerNumber(),
+        message.getControllerValue());
+    if (!parseResult.has_value()) {
+      return false;
+    }
+
+    const auto rpnMessage = parseResult.value();
+    if (rpnMessage.isNRPN || rpnMessage.parameterNumber != 0) {
+      return false;
+    }
+
+    // Pitch bend is insensitive on channel.
+    pitchBendSensitivity_.store(
+        static_cast<std::uint8_t>(rpnMessage.parameterNumber));
+
+    rpnDetector_.reset();
+
+    return reservePitchChange();
+  }
+
+  rpnDetector_.reset();
 
   bool isSuccess{};
 
@@ -139,6 +210,7 @@ bool FmAudioSource::tryMidiMessageReservation(
 
     for (const auto& assignment : assignments) {
       if (assignment.note.isNoteOn()) {
+        isSuccess &= reservePitchChange(assignment);
         isSuccess &= reserveNoteOn(assignment);
       } else {
         isSuccess &= reserveNoteOff(assignment);
@@ -149,13 +221,17 @@ bool FmAudioSource::tryMidiMessageReservation(
     isSuccess =
         assignment.has_value() ? reserveNoteOff(assignment.value()) : false;
   } else if (message.isPitchWheel()) {
-    // TODO: pitch bend
+    // Pitch bend is insensitive on channel.
+    pitchBend_ = message.getPitchWheelValue() + pitch_util::kMinPitchBend;
+    isSuccess = reservePitchChange();
   }
 
   return isSuccess;
 }
 
-void FmAudioSource::triggerReservedMidiMessages() {
+void FmAudioSource::triggerReservedChanges() {
+  std::lock_guard<std::mutex> guard(mutex_);
+
   for (const auto& change : reservedChanges_) {
     if (change.pinA1) {
       ym2608_->write_address_hi(change.address);
@@ -172,23 +248,9 @@ bool FmAudioSource::reserveNoteOn(const NoteAssignment& assignment) {
     return false;
   }
 
-  // Set pitch.
-  const std::uint16_t blockAndFNum =
-      calculateFNumberAndBlock(assignment.note.noteNumber);
-
-  static const std::uint16_t kFNum1AddressTable[kMaxChannelCount]{
-      0xa0, 0xa1, 0xa2, 0x1a0, 0x1a1, 0x1a2};
-  const auto fNum1Address = kFNum1AddressTable[assignment.assignId];
-  constexpr std::uint16_t kBlockFNum2AddressOffset{4};
-  reservedChanges_.emplace_back(
-      fNum1Address + kBlockFNum2AddressOffset,
-      static_cast<uint8_t>((blockAndFNum >> 8)));  ///< Block and F-Num2
-  reservedChanges_.emplace_back(
-      fNum1Address,
-      static_cast<std::uint8_t>(blockAndFNum & 0x00ff));  ///< F-Num1
-
   // Set note-on.
   constexpr std::uint8_t kKeyOffMask{0xf0u};
+  std::lock_guard<std::mutex> guard(mutex_);
   reservedChanges_.emplace_back(
       0x28, kNoteOnChannelTable[assignment.assignId] | kKeyOffMask);
 
@@ -200,7 +262,40 @@ bool FmAudioSource::reserveNoteOff(const NoteAssignment& assignment) {
     return false;
   }
 
+  std::lock_guard<std::mutex> guard(mutex_);
   reservedChanges_.emplace_back(0x28, kNoteOnChannelTable[assignment.assignId]);
+
+  return true;
+}
+
+bool FmAudioSource::reservePitchChange() {
+  bool isSuccess{true};
+  for (const auto& assignment : keyboard_.noteOns()) {
+    isSuccess &= reservePitchChange(assignment);
+  }
+  return isSuccess;
+}
+
+bool FmAudioSource::reservePitchChange(const NoteAssignment& assignment) {
+  if (kMaxChannelCount < assignment.assignId) {
+    return false;
+  }
+
+  const int cent = pitch_util::calculateCent(
+      assignment.note.noteNumber, pitchBend_, pitchBendSensitivity_.load());
+  const std::uint16_t blockAndFNum = calculateFNumberAndBlockFromCent(cent);
+
+  static const std::uint16_t kFNum1AddressTable[kMaxChannelCount]{
+      0xa0, 0xa1, 0xa2, 0x1a0, 0x1a1, 0x1a2};
+  const auto fNum1Address = kFNum1AddressTable[assignment.assignId];
+  constexpr std::uint16_t kBlockFNum2AddressOffset{4};
+  std::lock_guard<std::mutex> guard(mutex_);
+  reservedChanges_.emplace_back(
+      fNum1Address + kBlockFNum2AddressOffset,
+      static_cast<uint8_t>((blockAndFNum >> 8)));  ///< Block and F-Num2
+  reservedChanges_.emplace_back(
+      fNum1Address,
+      static_cast<std::uint8_t>(blockAndFNum & 0x00ff));  ///< F-Num1
 
   return true;
 }
@@ -230,6 +325,7 @@ void FmAudioSource::setTone() {
     const auto writeToBindedChannel =
         [this, offset = kAddressOffsetTableForToneSet[id]](
             std::uint16_t address, std::uint8_t data) {
+          std::lock_guard<std::mutex> guard(mutex_);
           reservedChanges_.emplace_back(address | offset, data);
         };
 

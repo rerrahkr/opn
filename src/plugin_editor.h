@@ -5,24 +5,41 @@
 
 #pragma once
 
+#include <JuceHeader.h>
+
 #include <memory>
 
-#include "plugin_processor.h"
+class Controller;
+struct EditorState;
+class PluginProcessor;
 
 //==============================================================================
-class PluginEditor : public juce::AudioProcessorEditor {
+class PluginEditor : public juce::AudioProcessorEditor,
+                     public juce::ActionListener {
  public:
-  explicit PluginEditor(PluginProcessor& p);
+  PluginEditor(PluginProcessor& processor, Controller& controller,
+               const EditorState& model,
+               juce::AudioProcessorValueTreeState& parameters);
   ~PluginEditor() override;
 
-  //==============================================================================
+  //============================================================================
   void paint(juce::Graphics& g) override;
   void resized() override;
 
+  void actionListenerCallback(const String& /*message*/) override;
+
  private:
-  // This reference is provided as a quick way for your editor to
-  // access the processor object that created it.
-  PluginProcessor& processor_;
+  /// Controller.
+  Controller& controller_;
+
+  /// Model.
+  const EditorState& model_;
+
+  // [Control] -----------------------------------------------------------------
+  using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+
+  std::unique_ptr<juce::Slider> pitchBendSensitivitySlider_;
+  std::unique_ptr<SliderAttachment> pitchBendSensitivitySliderAttachment_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };
