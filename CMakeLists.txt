@@ -11,17 +11,17 @@ include(CPack)
 add_subdirectory(lib/juce)
 
 juce_add_plugin(${PROJECT_TARGET}
-    COMPANY_NAME "Rerrah"
-    COMPANY_COPYRIGHT "Rerrah"
-    IS_SYNTH TRUE
-    NEEDS_MIDI_INPUT FALSE
-    NEEDS_MIDI_OUTPUT FALSE
-    IS_MIDI_EFFECT FALSE
+    PRODUCT_NAME OPN
+    COMPANY_COPYRIGHT "(C) 2023 Rerrah"
+    COMPANY_NAME Rerrah
+    FORMATS Standalone VST3
+    # PLUGIN_NAME OPN
     PLUGIN_MANUFACTURER_CODE Rera
-    PLUGIN_CODE Temp
-    FORMATS Standalone #VST3
-    # VST3_CATEGORIES "Fx"
-    PRODUCT_NAME "JUCETemplate")
+    PLUGIN_CODE Opnp
+    IS_SYNTH TRUE
+    NEEDS_MIDI_INPUT TRUE
+    NEEDS_MIDI_OUTPUT FALSE
+    VST3_CATEGORIES Instrument Synth)
 
 juce_generate_juce_header(${PROJECT_TARGET})
 
