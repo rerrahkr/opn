@@ -14,39 +14,20 @@
 #include "model.h"
 #include "plugin_editor.h"
 
-/**
- * @brief Utilities for plugin parameter.
- */
-namespace plugin_parameter {
-namespace {
-const std::unordered_map<Type, std::pair<juce::ParameterID, juce::String>>
-    kIdNameLookUp_ = {
-        {Type::PitchBendSensitivity,
-         {"pitchBendSensitivity", "Pitch Bend Sensitivity"}},
-};
-}
-
-juce::ParameterID id(Type type) { return kIdNameLookUp_.at(type).first; }
-
-juce::String idAsString(Type type) {
-  return kIdNameLookUp_.at(type).first.getParamID();
-}
-
-juce::String name(Type type) { return kIdNameLookUp_.at(type).second; }
-}  // namespace plugin_parameter
-
-//==============================================================================
 namespace {
 /// Default pitch bend sensitivity.
 constexpr std::uint8_t kDefaultPitchBendSensitivity{2};
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
   juce::AudioProcessorValueTreeState::ParameterLayout layout;
+  audio::FmParameters defaultParameters;
 
   layout.add(std::make_unique<juce::AudioParameterInt>(
-      plugin_parameter::id(plugin_parameter::Type::PitchBendSensitivity),
-      plugin_parameter::name(plugin_parameter::Type::PitchBendSensitivity), 1,
-      audio::pitch_util::kMaxPitchBendSensitivity,
+      audio::parameter::id(
+          audio::parameter::PluginParameter::PitchBendSensitivity),
+      audio::parameter::name(
+          audio::parameter::PluginParameter::PitchBendSensitivity),
+      1, audio::pitch_util::kMaxPitchBendSensitivity,
       kDefaultPitchBendSensitivity));
 
   return layout;
@@ -169,11 +150,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
   buffer.clear(0, buffer.getNumSamples());
 
-  audioSource_->tryReservePitchBendSensitivityChange(
-      static_cast<int>(parameters_
-                           .getRawParameterValue(plugin_parameter::idAsString(
-                               plugin_parameter::Type::PitchBendSensitivity))
-                           ->load()));
+  {
+    // Reflect parameter changes modified by sliders.
+    std::lock_guard<std::mutex> guard(parameterQueueMutex_);
+
+    while (!parameterChangeQueue_.empty()) {
+      auto&& parameter = parameterChangeQueue_.dequeue();
+      std::visit(audio::ParameterVisiter{*audioSource_, parameters_},
+                 parameter);
+    }
+  }
 
   if (!resampler_) {
     return;
@@ -244,3 +230,7 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 }
 
 //==============================================================================
+void PluginProcessor::reserveParameterChange(audio::Parameter parameter) {
+  std::lock_guard<std::mutex> guard(parameterQueueMutex_);
+  parameterChangeQueue_.enqueue(parameter);
+}

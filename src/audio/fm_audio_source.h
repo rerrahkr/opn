@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "keyboard.h"
+#include "parameter.h"
 
 namespace audio {
 /**
@@ -109,6 +110,9 @@ class FmAudioSource : public juce::AudioSource {
   /// RPN/NRPN detector.
   juce::MidiRPNDetector rpnDetector_;
 
+  /// Operator mask which should be note-on.
+  std::atomic_uint8_t noteOnMask_{0xf0u};
+
   // [Register Change] ---------------------------------------------------------
 
   /**
@@ -177,9 +181,10 @@ class FmAudioSource : public juce::AudioSource {
    */
   bool reservePitchChange(const NoteAssignment& assignment);
 
-  // ---------------------------------------------------------------------------
-
-  void setTone();
+  /**
+   * @brief Reserve register changes related to update tone parameters.
+   */
+  void reserveUpdatingAllToneParameter();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FmAudioSource)
 };

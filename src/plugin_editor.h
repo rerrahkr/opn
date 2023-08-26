@@ -9,6 +9,8 @@
 
 #include <memory>
 
+#include "ui/attached_component.h"
+
 class Controller;
 struct EditorState;
 class PluginProcessor;
@@ -36,10 +38,7 @@ class PluginEditor : public juce::AudioProcessorEditor,
   const EditorState& model_;
 
   // [Control] -----------------------------------------------------------------
-  using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
-
-  std::unique_ptr<juce::Slider> pitchBendSensitivitySlider_;
-  std::unique_ptr<SliderAttachment> pitchBendSensitivitySliderAttachment_;
+  std::unique_ptr<ui::AttachedSlider> pitchBendSensitivitySlider_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

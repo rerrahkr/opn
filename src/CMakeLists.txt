@@ -1,9 +1,11 @@
 target_sources(${PROJECT_TARGET}
     PRIVATE
         audio/fm_audio_source.cpp
+        audio/parameter.cpp
         audio/keyboard.cpp
         controller.cpp
         model.cpp
+        parameter_change_queue.cpp
         plugin_editor.cpp
         plugin_processor.cpp
         ui/nestable_grid.cpp)

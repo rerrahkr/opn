@@ -1,5 +1,9 @@
 {
     "files.associations": {
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "unordered_map": "cpp",
+        "*.mm": "cpp",
+        "stdexcept": "cpp",
+        "list": "cpp"
     }
 }

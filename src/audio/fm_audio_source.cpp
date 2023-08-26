@@ -116,7 +116,7 @@ void FmAudioSource::prepareToPlay(int samplesPerBlockExpected,
     reservedChanges_.emplace_back(0x29, 0x80);
   }
 
-  setTone();
+  reserveUpdatingAllToneParameter();
 
   triggerReservedChanges();
 
@@ -249,10 +249,9 @@ bool FmAudioSource::reserveNoteOn(const NoteAssignment& assignment) {
   }
 
   // Set note-on.
-  constexpr std::uint8_t kKeyOffMask{0xf0u};
   std::lock_guard<std::mutex> guard(mutex_);
   reservedChanges_.emplace_back(
-      0x28, kNoteOnChannelTable[assignment.assignId] | kKeyOffMask);
+      0x28, kNoteOnChannelTable[assignment.assignId] | noteOnMask_);
 
   return true;
 }
@@ -300,21 +299,8 @@ bool FmAudioSource::reservePitchChange(const NoteAssignment& assignment) {
   return true;
 }
 
-void FmAudioSource::setTone() {
-  struct Tone {
-    struct {
-      std::uint8_t ar, dr, sr, rr, sl, tl, ks, ml, dt, am;
-    } op[4];
-
-    std::uint8_t al, fb;
-  } tone{{
-             {31, 8, 0, 0, 9, 24, 0, 1, 0, 0},
-             {31, 6, 0, 7, 9, 0, 0, 1, 0, 0},
-             {31, 2, 0, 0, 4, 29, 0, 0, 0, 0},
-             {31, 1, 0, 7, 1, 0, 0, 1, 0, 0},
-         },
-         4,
-         5};
+void FmAudioSource::reserveUpdatingAllToneParameter() {
+  audio::FmParameters parameters;
 
   for (const std::size_t id : keyboard_.usedAssignIds()) {
     if (kMaxChannelCount <= id) {
@@ -329,25 +315,45 @@ void FmAudioSource::setTone() {
           reservedChanges_.emplace_back(address | offset, data);
         };
 
-    writeToBindedChannel(0xb0, (tone.fb << 3) | tone.al);
+    writeToBindedChannel(0xb0,
+                         ((parameters.fb & 7u) << 3) | (parameters.al & 7u));
 
-    for (size_t n = 0; n < 4; ++n) {
-      const auto& op = tone.op[n];
+    for (size_t n = 0; n < std::size(parameters.op); ++n) {
+      const auto& op = parameters.op[n];
       const auto writeToBindedOperator =
           [&writeToBindedChannel, offset = kOperatorAddressOffsetTable[n]](
               std::uint16_t address, std::uint8_t data) {
             writeToBindedChannel(address | offset, data);
           };
 
-      writeToBindedOperator(0x30, (op.dt << 4) | op.ml);
-      writeToBindedOperator(0x40, op.tl);
-      writeToBindedOperator(0x50, (op.ks << 6) | op.ar);
-      writeToBindedOperator(0x60, op.dr);
-      writeToBindedOperator(0x70, op.sr);
-      writeToBindedOperator(0x80, (op.sl << 4) | op.rr);
+      const std::uint8_t rawDt =
+          (op.dt < 0 ? 4u : 0u) |
+          (static_cast<std::uint8_t>(std::abs(op.dt)) & 3u);
+      writeToBindedOperator(0x30, (rawDt << 4) | (op.ml & 15u));
+      writeToBindedOperator(0x40, op.tl & 127u);
+      const std::uint8_t rawAr = op.ssgeg.isEnabled ? 31u : (op.ar & 31u);
+      writeToBindedOperator(0x50, ((op.ks & 3u) << 6) | rawAr);
+      writeToBindedOperator(0x60, op.dr & 31u);
+      writeToBindedOperator(0x70, op.sr & 31u);
+      writeToBindedOperator(0x80, ((op.sl & 15u) << 4) | (op.rr & 15u));
+      writeToBindedOperator(0x90, static_cast<std::uint8_t>(op.ssgeg.shape));
     }
 
-    writeToBindedChannel(0xb4, kPanpotMask);
+    writeToBindedChannel(0xb4, kPanpotMask | ((parameters.lfo.ams & 3u) << 4) |
+                                   (parameters.lfo.pms & 7u));
   }
+
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    reservedChanges_.emplace_back(0x22, (parameters.lfo.isEnabled ? 8u : 0u) |
+                                            (parameters.lfo.frequency & 7u));
+  }
+
+  // Change note-on mask.
+  std::uint8_t noteOnMask{};
+  for (std::size_t i = 0; i < std::size(parameters.op); ++i) {
+    noteOnMask |= (static_cast<std::uint8_t>(parameters.op[i].isEnabled) << i);
+  }
+  noteOnMask_.store(noteOnMask << 4);
 }
 }  // namespace audio

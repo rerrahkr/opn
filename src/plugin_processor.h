@@ -8,43 +8,11 @@
 #include <JuceHeader.h>
 
 #include <memory>
+#include <mutex>
 
-/**
- * @brief Utilities for plugin parameter.
- *
- */
-namespace plugin_parameter {
-/// Parameter type.
-enum class Type {
-  PitchBendSensitivity,
-};
+#include "audio/parameter.h"
+#include "parameter_change_queue.h"
 
-/**
- * @brief Get parameter identifier.
- *
- * @param[in] type Parameter type.
- * @return Parameter identifier.
- */
-juce::ParameterID id(Type type);
-
-/**
- * @brief Get paraemter identifier as \c juce::String.
- *
- * @param[in] type parameter type.
- * @return Parameter identifier text.
- */
-juce::String idAsString(Type type);
-
-/**
- * @brief Get parameter name.
- *
- * @param[in] type Parameter type.
- * @return Parameter name text.
- */
-juce::String name(Type type);
-}  // namespace plugin_parameter
-
-//==============================================================================
 class Controller;
 class Model;
 
@@ -91,6 +59,10 @@ class PluginProcessor : public juce::AudioProcessor {
   void getStateInformation(juce::MemoryBlock& destData) override;
   void setStateInformation(const void* data, int sizeInBytes) override;
 
+  //============================================================================
+  /// Reserve parameter change.
+  void reserveParameterChange(audio::Parameter parameter);
+
  private:
   //============================================================================
 
@@ -108,6 +80,11 @@ class PluginProcessor : public juce::AudioProcessor {
 
   /// Resampler.
   std::unique_ptr<juce::ResamplingAudioSource> resampler_;
+
+  std::mutex parameterQueueMutex_;
+
+  /// Queue storing notifications of parameter change.
+  ParameterChangeQueue parameterChangeQueue_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

@@ -5,6 +5,7 @@
 
 #include "plugin_editor.h"
 
+#include "audio/parameter.h"
 #include "controller.h"
 #include "model.h"
 #include "plugin_processor.h"
@@ -16,16 +17,16 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
                            const EditorState& model,
                            juce::AudioProcessorValueTreeState& parameters)
     : AudioProcessorEditor(&processor), controller_(controller), model_(model) {
-  {
-    pitchBendSensitivitySlider_ = std::make_unique<juce::Slider>(
-        juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
-    pitchBendSensitivitySliderAttachment_ = std::make_unique<SliderAttachment>(
-        parameters,
-        plugin_parameter::idAsString(
-            plugin_parameter::Type::PitchBendSensitivity),
-        *pitchBendSensitivitySlider_);
-    addAndMakeVisible(pitchBendSensitivitySlider_.get());
-  }
+  // Pitch bend sensitivity.
+  pitchBendSensitivitySlider_ = std::make_unique<ui::AttachedSlider>(
+      juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft, parameters,
+      audio::parameter::idAsString(
+          audio::parameter::PluginParameter::PitchBendSensitivity),
+      [&processor] {
+        processor.reserveParameterChange(
+            audio::parameter::PluginParameter::PitchBendSensitivity);
+      });
+  addAndMakeVisible(pitchBendSensitivitySlider_->slider);
 
   setSize(400, 300);
   resized();
@@ -40,7 +41,7 @@ void PluginEditor::paint(juce::Graphics& g) {
 }
 
 void PluginEditor::resized() {
-  pitchBendSensitivitySlider_->setBounds(0, 0, 120, 20);
+  pitchBendSensitivitySlider_->slider.setBounds(0, 0, 120, 20);
 }
 
 void PluginEditor::actionListenerCallback(const String& /*message*/) {}
