@@ -6,15 +6,33 @@
 #include <JuceHeader.h>
 #include <ymfm_opn.h>
 
+#include <algorithm>
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <mutex>
+#include <set>
+#include <tuple>
+#include <utility>
 #include <vector>
 
+#include "../ranged_value.h"
 #include "keyboard.h"
 #include "parameter.h"
+#include "register.h"
 
 namespace audio {
+/**
+ * @brief Concept of functor to change parameter.
+ */
+template <class T>
+concept ParameterChanger = requires(T f, const FmParameters& parameters,
+                                    const std::set<std::size_t>& ids) {
+  {
+    f(parameters, ids)
+  } -> std::convertible_to<std::pair<FmParameters, std::vector<Register>>>;
+};
+
 /**
  * @brief Audio source class for FM part.
  * @note Note-on and -off is sensitive on MIDI channel, but pitch bend and pitch
@@ -68,6 +86,29 @@ class FmAudioSource : public juce::AudioSource {
   bool tryReservePitchBendSensitivityChange(int value);
 
   /**
+   * @brief Try to reserve parameter change.
+   * @param[in] changer Functor to change parameter.
+   * @return \c true if change is accepted, otherwise \c false.
+   */
+  template <ParameterChanger T>
+  bool tryReserveParameterChange(const T&& changer) {
+    const std::lock_guard guard(mutex_);
+    auto&& [newParameters, changes] =
+        changer(toneParameterState_, keyboard_.usedAssignIds());
+
+    if (changes.empty()) {
+      return false;
+    }
+
+    toneParameterState_ = std::move(newParameters);
+    reservedChanges_.reserve(reservedChanges_.size() + changes.size());
+    std::move(std::begin(changes), std::end(changes),
+              std::back_inserter(reservedChanges_));
+
+    return true;
+  }
+
+  /**
    * @brief Try to reserve MIDI message after triggering.
    * @param[in] message MIDI message
    * @return \c true if given message was used. If it was discareded, returns
@@ -107,6 +148,9 @@ class FmAudioSource : public juce::AudioSource {
   /// Semitone range for pitch bend.
   std::atomic_uint8_t pitchBendSensitivity_{2};
 
+  // State of tone parameters.
+  audio::FmParameters toneParameterState_;
+
   /// RPN/NRPN detector.
   juce::MidiRPNDetector rpnDetector_;
 
@@ -114,40 +158,6 @@ class FmAudioSource : public juce::AudioSource {
   std::atomic_uint8_t noteOnMask_{0xf0u};
 
   // [Register Change] ---------------------------------------------------------
-
-  /**
-   * @brief Value pair of address and data of register.
-   */
-  struct Register {
-    /// State of pin A1 which controls data bus in a chip.
-    bool pinA1{};
-
-    /// Address where data should be written in register.
-    std::uint8_t address{};
-
-    /// Data to write.
-    std::uint8_t data{};
-
-    /**
-     * @brief Constructor.
-     * @param[in] pinA1 State of pin A1.
-     * @param[in] address Address where data should be written in register.
-     * @param[in] data Data to write.
-     */
-    Register(bool pinA1, std::uint8_t address, std::uint8_t data)
-        : pinA1(pinA1), address(address), data(data){};
-
-    /**
-     * @brief Constructor supporting 16-bit expression for address.
-     * @param[in] address Bit 0-7 is address. Bit 8 is a flag which represents a
-     * state of pin A1.
-     * @param[in] data Data to write.
-     */
-    Register(std::uint16_t address, std::uint8_t data)
-        : pinA1(address & 0x0100),
-          address(static_cast<std::uint8_t>(address & 0x00ff)),
-          data(data) {}
-  };
 
   /// Queue of register changes.
   std::vector<Register> reservedChanges_;

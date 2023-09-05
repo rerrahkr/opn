@@ -38,6 +38,18 @@ class PluginEditor : public juce::AudioProcessorEditor,
   const EditorState& model_;
 
   // [Control] -----------------------------------------------------------------
+  std::unique_ptr<juce::Label> fbLabel_;
+  std::unique_ptr<ui::AttachedSlider> fbSlider_;
+
+  std::unique_ptr<ui::AttachedSlider> alSlider_;
+
+  struct OperatorControls {
+    std::unique_ptr<ui::AttachedSlider> arSlider_, tlSlider_, drSlider_,
+        slSlider_, srSlider_, rrSlider_, ksSlider_;
+    std::unique_ptr<ui::AttachedSlider> mlSlider_, dtSlider_;
+  };
+
+  std::unique_ptr<juce::Label> pitchBendSensitivityLabel_;
   std::unique_ptr<ui::AttachedSlider> pitchBendSensitivitySlider_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)

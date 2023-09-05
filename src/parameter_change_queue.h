@@ -16,7 +16,7 @@ class FmAudioSource;
 }
 
 /**
- * @brief FIFO queue of parameters whoose elements.
+ * @brief FIFO queue of parameters whoose element is unique.
  */
 class ParameterChangeQueue {
  public:

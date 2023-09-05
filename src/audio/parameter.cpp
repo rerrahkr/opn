@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "fm_audio_source.h"
+#include "fm_changer.h"
 
 namespace audio {
 namespace parameter {
@@ -108,7 +109,26 @@ void ParameterVisiter::operator()(parameter::PluginParameter parameter) {
   }
 }
 
-void ParameterVisiter::operator()(parameter::FmToneParameter /*parameter*/) {}
+void ParameterVisiter::operator()(parameter::FmToneParameter parameter) {
+  switch (parameter) {
+    default:
+      break;
+
+    case parameter::FmToneParameter::Fb: {
+      audioSource_.tryReserveParameterChange(FmFeedbackChanger(
+          apvts_.getRawParameterValue(parameter::idAsString(parameter))
+              ->load()));
+      break;
+    }
+
+    case parameter::FmToneParameter::Al: {
+      audioSource_.tryReserveParameterChange(FmAlgorithmChanger(
+          apvts_.getRawParameterValue(parameter::idAsString(parameter))
+              ->load()));
+      break;
+    }
+  }
+}
 
 void ParameterVisiter::operator()(
     const parameter::FmOperatorParameterWithSlot& /*parameter*/) {}

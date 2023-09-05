@@ -8,6 +8,8 @@
 #include <compare>
 #include <variant>
 
+#include "../ranged_value.h"
+
 namespace audio {
 namespace parameter {
 /// Parameters related to plugin behavior.
@@ -197,13 +199,20 @@ namespace audio {
  * @brief FM parameters.
  */
 struct FmParameters {
-  std::uint8_t al{7u}, fb{0u};
+  using AlgorithmValue = RangedValue<std::uint8_t, 0, 7>;
+  using FeedbackValue = RangedValue<std::uint8_t, 0, 7>;
+
+  AlgorithmValue al{7u};
+  FeedbackValue fb{0u};
 
   /// Parameters related to operator.
   struct Operator {
-    std::uint8_t ar{31u}, dr{0u}, sr{0u}, rr{7u}, sl{0u}, tl{0u}, ks{0u},
-        ml{0u};
-    std::int8_t dt{0};
+    RangedValue<std::uint8_t, 0, 31> ar{31u}, dr{0u}, sr{0u};
+    RangedValue<std::uint8_t, 0, 15> rr{7u}, sl{0u};
+    RangedValue<std::uint8_t, 0, 127> tl{0u};
+    RangedValue<std::uint8_t, 0, 3> ks{0u};
+    RangedValue<std::uint8_t, 0, 15> ml{0u};
+    RangedValue<std::int8_t, -3, 3> dt{0};
 
     /// Data of SSG-EG
     struct Ssgeg {
@@ -222,10 +231,17 @@ struct FmParameters {
 
   /// Parameters related on LFO.
   struct Lfo {
-    std::int8_t frequency{}, pms{}, ams{};
+    RangedValue<std::uint8_t, 0, 7> frequency{};
+    RangedValue<std::uint8_t, 0, 7> pms{};
+    RangedValue<std::uint8_t, 0, 3> ams{};
     bool isEnabled{};
   };
 
   Lfo lfo;
+
+  /// Default parameters.
+  static const FmParameters defaultParameters;
 };
+
+inline const FmParameters FmParameters::defaultParameters{};
 }  // namespace audio

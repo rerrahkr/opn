@@ -33,7 +33,7 @@ class RangedValue {
    *
    * @param[in] value Initial value.
    */
-  constexpr explicit RangedValue(T value) noexcept { setAndClampValue(value); }
+  constexpr RangedValue(T value) noexcept { setAndClampValue(value); }
 
   /**
    * @brief Get value.
@@ -72,14 +72,14 @@ class RangedValue {
    *
    * @return Minimum value.
    */
-  constexpr T minimumvalue() const noexcept { return Minimum; }
+  constexpr T minimum() const noexcept { return Minimum; }
 
   /**
    * @brief Get maximum value.
    *
    * @return Maximum value.
    */
-  constexpr T maximumValue() const noexcept { return Maximum; }
+  constexpr T maximum() const noexcept { return Maximum; }
 
   auto operator<=>(const RangedValue&) const = default;
 

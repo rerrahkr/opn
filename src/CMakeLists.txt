@@ -1,6 +1,7 @@
 target_sources(${PROJECT_TARGET}
     PRIVATE
         audio/fm_audio_source.cpp
+        audio/fm_changer.cpp
         audio/parameter.cpp
         audio/keyboard.cpp
         controller.cpp

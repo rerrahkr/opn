@@ -113,7 +113,7 @@ void FmAudioSource::prepareToPlay(int samplesPerBlockExpected,
     std::lock_guard<std::mutex> guard(mutex_);
 
     // Initialize interruption / YM2608 mode
-    reservedChanges_.emplace_back(0x29, 0x80);
+    reservedChanges_.emplace_back(0x29u, 0x80u);
   }
 
   reserveUpdatingAllToneParameter();
@@ -251,7 +251,7 @@ bool FmAudioSource::reserveNoteOn(const NoteAssignment& assignment) {
   // Set note-on.
   std::lock_guard<std::mutex> guard(mutex_);
   reservedChanges_.emplace_back(
-      0x28, kNoteOnChannelTable[assignment.assignId] | noteOnMask_);
+      0x28u, kNoteOnChannelTable[assignment.assignId] | noteOnMask_);
 
   return true;
 }
@@ -262,7 +262,8 @@ bool FmAudioSource::reserveNoteOff(const NoteAssignment& assignment) {
   }
 
   std::lock_guard<std::mutex> guard(mutex_);
-  reservedChanges_.emplace_back(0x28, kNoteOnChannelTable[assignment.assignId]);
+  reservedChanges_.emplace_back(0x28u,
+                                kNoteOnChannelTable[assignment.assignId]);
 
   return true;
 }
@@ -285,7 +286,7 @@ bool FmAudioSource::reservePitchChange(const NoteAssignment& assignment) {
   const std::uint16_t blockAndFNum = calculateFNumberAndBlockFromCent(cent);
 
   static const std::uint16_t kFNum1AddressTable[kMaxChannelCount]{
-      0xa0, 0xa1, 0xa2, 0x1a0, 0x1a1, 0x1a2};
+      0xa0u, 0xa1u, 0xa2u, 0x1a0u, 0x1a1u, 0x1a2u};
   const auto fNum1Address = kFNum1AddressTable[assignment.assignId];
   constexpr std::uint16_t kBlockFNum2AddressOffset{4};
   std::lock_guard<std::mutex> guard(mutex_);
@@ -300,8 +301,6 @@ bool FmAudioSource::reservePitchChange(const NoteAssignment& assignment) {
 }
 
 void FmAudioSource::reserveUpdatingAllToneParameter() {
-  audio::FmParameters parameters;
-
   for (const std::size_t id : keyboard_.usedAssignIds()) {
     if (kMaxChannelCount <= id) {
       // TODO: Fix polyphonic control
@@ -315,11 +314,11 @@ void FmAudioSource::reserveUpdatingAllToneParameter() {
           reservedChanges_.emplace_back(address | offset, data);
         };
 
-    writeToBindedChannel(0xb0,
-                         ((parameters.fb & 7u) << 3) | (parameters.al & 7u));
+    writeToBindedChannel(0xb0u, ((toneParameterState_.fb.value() & 7u) << 3) |
+                                    (toneParameterState_.al.value() & 7u));
 
-    for (size_t n = 0; n < std::size(parameters.op); ++n) {
-      const auto& op = parameters.op[n];
+    for (size_t n = 0; n < std::size(toneParameterState_.op); ++n) {
+      const auto& op = toneParameterState_.op[n];
       const auto writeToBindedOperator =
           [&writeToBindedChannel, offset = kOperatorAddressOffsetTable[n]](
               std::uint16_t address, std::uint8_t data) {
@@ -327,32 +326,37 @@ void FmAudioSource::reserveUpdatingAllToneParameter() {
           };
 
       const std::uint8_t rawDt =
-          (op.dt < 0 ? 4u : 0u) |
-          (static_cast<std::uint8_t>(std::abs(op.dt)) & 3u);
-      writeToBindedOperator(0x30, (rawDt << 4) | (op.ml & 15u));
-      writeToBindedOperator(0x40, op.tl & 127u);
-      const std::uint8_t rawAr = op.ssgeg.isEnabled ? 31u : (op.ar & 31u);
-      writeToBindedOperator(0x50, ((op.ks & 3u) << 6) | rawAr);
-      writeToBindedOperator(0x60, op.dr & 31u);
-      writeToBindedOperator(0x70, op.sr & 31u);
-      writeToBindedOperator(0x80, ((op.sl & 15u) << 4) | (op.rr & 15u));
+          (op.dt.value() < 0 ? 4u : 0u) |
+          (static_cast<std::uint8_t>(std::abs(op.dt.value())) & 3u);
+      writeToBindedOperator(0x30u, (rawDt << 4) | (op.ml.value() & 15u));
+      writeToBindedOperator(0x40u, op.tl.value() & 127u);
+      const std::uint8_t rawAr =
+          op.ssgeg.isEnabled ? 31u : (op.ar.value() & 31u);
+      writeToBindedOperator(0x50u, ((op.ks.value() & 3u) << 6) | rawAr);
+      writeToBindedOperator(0x60u, op.dr.value() & 31u);
+      writeToBindedOperator(0x70u, op.sr.value() & 31u);
+      writeToBindedOperator(
+          0x80u, ((op.sl.value() & 15u) << 4) | (op.rr.value() & 15u));
       writeToBindedOperator(0x90, static_cast<std::uint8_t>(op.ssgeg.shape));
     }
 
-    writeToBindedChannel(0xb4, kPanpotMask | ((parameters.lfo.ams & 3u) << 4) |
-                                   (parameters.lfo.pms & 7u));
+    writeToBindedChannel(
+        0xb4u, kPanpotMask | ((toneParameterState_.lfo.ams.value() & 3u) << 4) |
+                   (toneParameterState_.lfo.pms.value() & 7u));
   }
 
   {
     std::lock_guard<std::mutex> guard(mutex_);
-    reservedChanges_.emplace_back(0x22, (parameters.lfo.isEnabled ? 8u : 0u) |
-                                            (parameters.lfo.frequency & 7u));
+    reservedChanges_.emplace_back(
+        0x22u, (toneParameterState_.lfo.isEnabled ? 8u : 0u) |
+                   (toneParameterState_.lfo.frequency.value() & 7u));
   }
 
   // Change note-on mask.
   std::uint8_t noteOnMask{};
-  for (std::size_t i = 0; i < std::size(parameters.op); ++i) {
-    noteOnMask |= (static_cast<std::uint8_t>(parameters.op[i].isEnabled) << i);
+  for (std::size_t i = 0; i < std::size(toneParameterState_.op); ++i) {
+    noteOnMask |=
+        (static_cast<std::uint8_t>(toneParameterState_.op[i].isEnabled) << i);
   }
   noteOnMask_.store(noteOnMask << 4);
 }

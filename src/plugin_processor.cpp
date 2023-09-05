@@ -30,6 +30,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
       1, audio::pitch_util::kMaxPitchBendSensitivity,
       kDefaultPitchBendSensitivity));
 
+  const auto& fmParameters = audio::FmParameters::defaultParameters;
+
+  layout.add(std::make_unique<juce::AudioParameterInt>(
+      audio::parameter::id(audio::parameter::FmToneParameter::Fb),
+      audio::parameter::name(audio::parameter::FmToneParameter::Fb),
+      fmParameters.fb.minimum(), fmParameters.fb.maximum(),
+      fmParameters.fb.value()));
+
+  layout.add(std::make_unique<juce::AudioParameterInt>(
+      audio::parameter::id(audio::parameter::FmToneParameter::Al),
+      audio::parameter::name(audio::parameter::FmToneParameter::Al),
+      fmParameters.al.minimum(), fmParameters.al.maximum(),
+      fmParameters.al.value()));
+
   return layout;
 }
 }  // namespace
@@ -154,10 +168,14 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Reflect parameter changes modified by sliders.
     std::lock_guard<std::mutex> guard(parameterQueueMutex_);
 
-    while (!parameterChangeQueue_.empty()) {
-      auto&& parameter = parameterChangeQueue_.dequeue();
-      std::visit(audio::ParameterVisiter{*audioSource_, parameters_},
-                 parameter);
+    if (!parameterChangeQueue_.empty()) {
+      while (!parameterChangeQueue_.empty()) {
+        auto&& parameter = parameterChangeQueue_.dequeue();
+        std::visit(audio::ParameterVisiter{*audioSource_, parameters_},
+                   parameter);
+      }
+
+      audioSource_->triggerReservedChanges();
     }
   }
 
