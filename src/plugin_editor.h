@@ -8,12 +8,17 @@
 #include <JuceHeader.h>
 
 #include <memory>
+#include <unordered_map>
 
 #include "ui/attached_component.h"
 
 class Controller;
 struct EditorState;
 class PluginProcessor;
+
+namespace audio::parameter {
+enum class FmOperatorParameter;
+}
 
 //==============================================================================
 class PluginEditor : public juce::AudioProcessorEditor,
@@ -43,11 +48,8 @@ class PluginEditor : public juce::AudioProcessorEditor,
 
   std::unique_ptr<ui::AttachedSlider> alSlider_;
 
-  struct OperatorControls {
-    std::unique_ptr<ui::AttachedSlider> arSlider_, tlSlider_, drSlider_,
-        slSlider_, srSlider_, rrSlider_, ksSlider_;
-    std::unique_ptr<ui::AttachedSlider> mlSlider_, dtSlider_;
-  };
+  std::unordered_map<audio::parameter::FmOperatorParameter, ui::AttachedSlider>
+      operatorSliders_[4];
 
   std::unique_ptr<juce::Label> pitchBendSensitivityLabel_;
   std::unique_ptr<ui::AttachedSlider> pitchBendSensitivitySlider_;

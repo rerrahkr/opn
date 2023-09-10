@@ -87,6 +87,7 @@ enum class FmOperatorParameter {
   Tl,
   Ks,
   Ml,
+  Dt,
   Amon,
   SsgegEnabled,
   SsgegShape,
@@ -195,24 +196,43 @@ class ParameterVisiter {
 
 //==============================================================================
 namespace audio {
+namespace parameter {
+// Value aliases.
+using AlgorithmValue = RangedValue<std::uint8_t, 0, 7>;
+using FeedbackValue = RangedValue<std::uint8_t, 0, 7>;
+using AttackRateValue = RangedValue<std::uint8_t, 0, 31>;
+using DecayRateValue = RangedValue<std::uint8_t, 0, 31>;
+using SustainRateValue = RangedValue<std::uint8_t, 0, 31>;
+using ReleaseRateValue = RangedValue<std::uint8_t, 0, 15>;
+using SustainLevelValue = RangedValue<std::uint8_t, 0, 15>;
+using TotalLevelValue = RangedValue<std::uint8_t, 0, 127>;
+using KeyScaleValue = RangedValue<std::uint8_t, 0, 3>;
+using MultipleValue = RangedValue<std::uint8_t, 0, 15>;
+using DetuneValue = RangedValue<std::int8_t, -3, 3>;
+
+using LfoFrequency = RangedValue<std::uint8_t, 0, 7>;
+using LfoPmsValue = RangedValue<std::uint8_t, 0, 7>;
+using LfoAmsValue = RangedValue<std::uint8_t, 0, 3>;
+}  // namespace parameter
+
 /**
  * @brief FM parameters.
  */
 struct FmParameters {
-  using AlgorithmValue = RangedValue<std::uint8_t, 0, 7>;
-  using FeedbackValue = RangedValue<std::uint8_t, 0, 7>;
-
-  AlgorithmValue al{7u};
-  FeedbackValue fb{0u};
+  parameter::AlgorithmValue al{7u};
+  parameter::FeedbackValue fb{0u};
 
   /// Parameters related to operator.
   struct Operator {
-    RangedValue<std::uint8_t, 0, 31> ar{31u}, dr{0u}, sr{0u};
-    RangedValue<std::uint8_t, 0, 15> rr{7u}, sl{0u};
-    RangedValue<std::uint8_t, 0, 127> tl{0u};
-    RangedValue<std::uint8_t, 0, 3> ks{0u};
-    RangedValue<std::uint8_t, 0, 15> ml{0u};
-    RangedValue<std::int8_t, -3, 3> dt{0};
+    parameter::AttackRateValue ar{31u};
+    parameter::DecayRateValue dr{0u};
+    parameter::SustainRateValue sr{0u};
+    parameter::ReleaseRateValue rr{7u};
+    parameter::SustainLevelValue sl{0u};
+    parameter::TotalLevelValue tl{0u};
+    parameter::KeyScaleValue ks{0u};
+    parameter::MultipleValue ml{0u};
+    parameter::DetuneValue dt{0};
 
     /// Data of SSG-EG
     struct Ssgeg {
@@ -227,21 +247,19 @@ struct FmParameters {
     bool isEnabled{true};  ///< Whether this operator is enabled.
   };
 
-  Operator op[4]{};
+  Operator slot[4]{};
 
   /// Parameters related on LFO.
   struct Lfo {
-    RangedValue<std::uint8_t, 0, 7> frequency{};
-    RangedValue<std::uint8_t, 0, 7> pms{};
-    RangedValue<std::uint8_t, 0, 3> ams{};
+    parameter::LfoFrequency frequency{};
+    parameter::LfoPmsValue pms{};
+    parameter::LfoAmsValue ams{};
     bool isEnabled{};
   };
 
-  Lfo lfo;
-
-  /// Default parameters.
-  static const FmParameters defaultParameters;
+  Lfo lfo{};
 };
 
-inline const FmParameters FmParameters::defaultParameters{};
+/// Default FM parameter values.
+inline constexpr FmParameters defaultFmParameters{};
 }  // namespace audio

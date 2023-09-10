@@ -20,29 +20,78 @@ constexpr std::uint8_t kDefaultPitchBendSensitivity{2};
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
   juce::AudioProcessorValueTreeState::ParameterLayout layout;
-  audio::FmParameters defaultParameters;
+
+  namespace ap = audio::parameter;
 
   layout.add(std::make_unique<juce::AudioParameterInt>(
-      audio::parameter::id(
-          audio::parameter::PluginParameter::PitchBendSensitivity),
-      audio::parameter::name(
-          audio::parameter::PluginParameter::PitchBendSensitivity),
-      1, audio::pitch_util::kMaxPitchBendSensitivity,
+      ap::id(ap::PluginParameter::PitchBendSensitivity),
+      ap::name(ap::PluginParameter::PitchBendSensitivity), 1,
+      audio::pitch_util::kMaxPitchBendSensitivity,
       kDefaultPitchBendSensitivity));
 
-  const auto& fmParameters = audio::FmParameters::defaultParameters;
+  const auto& fmParameters = audio::defaultFmParameters;
 
   layout.add(std::make_unique<juce::AudioParameterInt>(
-      audio::parameter::id(audio::parameter::FmToneParameter::Fb),
-      audio::parameter::name(audio::parameter::FmToneParameter::Fb),
-      fmParameters.fb.minimum(), fmParameters.fb.maximum(),
-      fmParameters.fb.value()));
+      ap::id(ap::FmToneParameter::Fb), ap::name(ap::FmToneParameter::Fb),
+      ap::FeedbackValue::kMinimum, ap::FeedbackValue::kMaximum,
+      fmParameters.fb.rawValue()));
 
   layout.add(std::make_unique<juce::AudioParameterInt>(
-      audio::parameter::id(audio::parameter::FmToneParameter::Al),
-      audio::parameter::name(audio::parameter::FmToneParameter::Al),
-      fmParameters.al.minimum(), fmParameters.al.maximum(),
-      fmParameters.al.value()));
+      ap::id(ap::FmToneParameter::Al), ap::name(ap::FmToneParameter::Al),
+      ap::AlgorithmValue::kMinimum, ap::AlgorithmValue::kMaximum,
+      fmParameters.al.rawValue()));
+
+  for (std::size_t n = 0; n < std::size(audio::defaultFmParameters.slot); ++n) {
+    const auto& slot = fmParameters.slot[n];
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Ar),
+        ap::name(n, ap::FmOperatorParameter::Ar), ap::AttackRateValue::kMinimum,
+        ap::AttackRateValue::kMaximum, slot.ar.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Dr),
+        ap::name(n, ap::FmOperatorParameter::Dr), ap::DecayRateValue::kMinimum,
+        ap::DecayRateValue::kMaximum, slot.dr.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Sr),
+        ap::name(n, ap::FmOperatorParameter::Sr),
+        ap::SustainRateValue::kMinimum, ap::SustainRateValue::kMaximum,
+        slot.sr.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Rr),
+        ap::name(n, ap::FmOperatorParameter::Rr),
+        ap::ReleaseRateValue::kMinimum, ap::ReleaseRateValue::kMaximum,
+        slot.rr.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Sl),
+        ap::name(n, ap::FmOperatorParameter::Sl),
+        ap::SustainLevelValue::kMinimum, ap::SustainLevelValue::kMaximum,
+        slot.sl.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Tl),
+        ap::name(n, ap::FmOperatorParameter::Tl), ap::TotalLevelValue::kMinimum,
+        ap::TotalLevelValue::kMaximum, slot.tl.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Ks),
+        ap::name(n, ap::FmOperatorParameter::Ks), ap::KeyScaleValue::kMinimum,
+        ap::KeyScaleValue::kMaximum, slot.ks.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Ml),
+        ap::name(n, ap::FmOperatorParameter::Ml), ap::MultipleValue::kMinimum,
+        ap::MultipleValue::kMaximum, slot.ml.rawValue()));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        ap::id(n, ap::FmOperatorParameter::Dt),
+        ap::name(n, ap::FmOperatorParameter::Dt), ap::DetuneValue::kMinimum,
+        ap::DetuneValue::kMaximum, slot.dt.rawValue()));
+  }
 
   return layout;
 }

@@ -6,6 +6,7 @@
 #include <limits>
 #include <numeric>
 
+#include "../util.h"
 #include "pitch_util.h"
 
 namespace audio {
@@ -20,22 +21,43 @@ constexpr unsigned int kChipClockHz{3993600 * 2};
 constexpr std::size_t kMaxChannelCount{6};
 
 /**
- * @brief Look-up table of address offsets for setting tone. The index is
- * channel number.
+ * @brief Calculate address added channel offset.
+ * @param[in] channel Number of channel.
+ * @param[in] baseAddress Address where @c channel is 0.
+ * @return Address added offset, or @c baseAddress if @c channel is invalid
+ * value.
  */
-constexpr std::uint16_t kAddressOffsetTableForToneSet[kMaxChannelCount]{
-    0x0u, 0x1u, 0x2u, 0x100u, 0x101u, 0x102u};
+constexpr std::uint16_t addressOfChannel(std::size_t channel,
+                                         std::uint16_t baseAddress) noexcept {
+  constexpr std::uint16_t kOffset[kMaxChannelCount]{0x0u,   0x1u,   0x2u,
+                                                    0x100u, 0x101u, 0x102u};
+  return (channel < kMaxChannelCount) ? (baseAddress + kOffset[channel])
+                                      : baseAddress;
+}
 
 /**
- * @brief Look-up table of address offset used to write a parameter of
- * operators. The index is operator number.
+ * @brief Calculate address added operator offset.
+ * @param[in] slot Operator (slot) number.
+ * @param[in] baseAddress Address where @c slot is 0.
+ * @return Address added offset, or @c baseAddress if @c slot is invalid.
  */
-constexpr std::uint16_t kOperatorAddressOffsetTable[]{
-    0u,
-    8u,
-    4u,
-    12u,
-};
+constexpr std::uint16_t addressOfOperator(std::size_t slot,
+                                          std::uint16_t baseAddress) noexcept {
+  constexpr std::uint16_t kOffset[]{0u, 8u, 4u, 12u};
+  return (slot < std::size(kOffset)) ? (baseAddress + kOffset[slot])
+                                     : baseAddress;
+}
+
+/**
+ * @brief Convert detune value from signed to unsigned.
+ * @param[in] value Signed detune value.
+ * @return Unsigned detune value.
+ */
+inline std::uint8_t convertDetuneAsRegisterValue(
+    const parameter::DetuneValue& value) {
+  return (value.rawValue() < 0 ? 4u : 0u) |
+         static_cast<std::uint8_t>(std::abs(value.rawValue()));
+}
 
 /// Mask of panpot set at $b4-$b6. This means "we set panpot to center."
 constexpr std::uint8_t kPanpotMask{0xf0u};
@@ -110,7 +132,7 @@ void FmAudioSource::prepareToPlay(int samplesPerBlockExpected,
   ym2608_->reset();
 
   {
-    std::lock_guard<std::mutex> guard(mutex_);
+    const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
 
     // Initialize interruption / YM2608 mode
     reservedChanges_.emplace_back(0x29u, 0x80u);
@@ -173,6 +195,341 @@ bool FmAudioSource::tryReservePitchBendSensitivityChange(int value) {
   return reservePitchChange();
 }
 
+bool FmAudioSource::tryReserveFeedbackChange(
+    const parameter::FeedbackValue& value) {
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  if (std::exchange(toneParameterState_.fb, value) == value) {
+    return false;
+  }
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(
+        addressOfChannel(channel, 0xb0u),
+        (value.rawValue() << 3) | toneParameterState_.al.rawValue());
+  }
+  return true;
+}
+
+bool FmAudioSource::tryReserveAlgorithmChange(
+    const parameter::AlgorithmValue& value) {
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  if (std::exchange(toneParameterState_.al, value) == value) {
+    return false;
+  }
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(
+        addressOfChannel(channel, 0xb0u),
+        (toneParameterState_.fb.rawValue() << 3) | value.rawValue());
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveAttackRateChange(
+    std::size_t slot, const parameter::AttackRateValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.ar, value) == value) {
+    return false;
+  }
+
+  if (slotParameters.ssgeg.isEnabled) {
+    // No need to change register.
+    return true;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x50u);
+  const std::uint8_t registerValue =
+      (slotParameters.ks.rawValue() << 6) | value.rawValue();
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  registerValue);
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveDecayRateChange(
+    std::size_t slot, const parameter::DecayRateValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.dr, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x60u);
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  value.rawValue());
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveSustainRateChange(
+    std::size_t slot, const parameter::SustainRateValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.sr, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x70u);
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  value.rawValue());
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveReleaseRateChange(
+    std::size_t slot, const parameter::ReleaseRateValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.rr, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x80u);
+  const std::uint8_t registerValue =
+      (slotParameters.sl.rawValue() << 4) | value.rawValue();
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  registerValue);
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveSustainLevelChange(
+    std::size_t slot, const parameter::SustainLevelValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.sl, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x80u);
+  const std::uint8_t registerValue =
+      (value.rawValue() << 4) | slotParameters.rr.rawValue();
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  registerValue);
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveTotalLevelChange(
+    std::size_t slot, const parameter::TotalLevelValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.tl, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x40u);
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  value.rawValue());
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveKeyScaleChange(
+    std::size_t slot, const parameter::KeyScaleValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.ks, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x50u);
+  const std::uint8_t rawAr = slotParameters.ssgeg.isEnabled
+                                 ? parameter::AttackRateValue::kMaximum
+                                 : slotParameters.ar.rawValue();
+  const std::uint8_t registerValue = (value.rawValue() << 6) | rawAr;
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  registerValue);
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveMultipleChange(
+    std::size_t slot, const parameter::MultipleValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.ml, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x30u);
+  const std::uint8_t rawDt = convertDetuneAsRegisterValue(slotParameters.dt);
+  const std::uint8_t registerValue = (rawDt << 4) | value.rawValue();
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  registerValue);
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveDetuneChange(
+    std::size_t slot, const parameter::DetuneValue& value) {
+  if (std::size(defaultFmParameters.slot) <= slot) {
+    return false;
+  }
+
+  const std::lock_guard guard1(parameterStateMutex_),
+      guard2(reservedChangesMutex_);
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.dt, value) == value) {
+    return false;
+  }
+
+  const std::uint16_t address = addressOfOperator(slot, 0x30u);
+  const std::uint8_t rawDt = convertDetuneAsRegisterValue(value);
+  const std::uint8_t registerValue =
+      (rawDt << 4) | slotParameters.ml.rawValue();
+
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(addressOfChannel(channel, address),
+                                  registerValue);
+  }
+
+  return true;
+}
+
 bool FmAudioSource::tryReserveChangeFromMidiMessage(
     const juce::MidiMessage& message) {
   DBG(message.getDescription());
@@ -230,7 +587,7 @@ bool FmAudioSource::tryReserveChangeFromMidiMessage(
 }
 
 void FmAudioSource::triggerReservedChanges() {
-  std::lock_guard<std::mutex> guard(mutex_);
+  const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
 
   for (const auto& change : reservedChanges_) {
     if (change.pinA1) {
@@ -249,7 +606,7 @@ bool FmAudioSource::reserveNoteOn(const NoteAssignment& assignment) {
   }
 
   // Set note-on.
-  std::lock_guard<std::mutex> guard(mutex_);
+  const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
   reservedChanges_.emplace_back(
       0x28u, kNoteOnChannelTable[assignment.assignId] | noteOnMask_);
 
@@ -261,7 +618,7 @@ bool FmAudioSource::reserveNoteOff(const NoteAssignment& assignment) {
     return false;
   }
 
-  std::lock_guard<std::mutex> guard(mutex_);
+  const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
   reservedChanges_.emplace_back(0x28u,
                                 kNoteOnChannelTable[assignment.assignId]);
 
@@ -289,7 +646,7 @@ bool FmAudioSource::reservePitchChange(const NoteAssignment& assignment) {
       0xa0u, 0xa1u, 0xa2u, 0x1a0u, 0x1a1u, 0x1a2u};
   const auto fNum1Address = kFNum1AddressTable[assignment.assignId];
   constexpr std::uint16_t kBlockFNum2AddressOffset{4};
-  std::lock_guard<std::mutex> guard(mutex_);
+  const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
   reservedChanges_.emplace_back(
       fNum1Address + kBlockFNum2AddressOffset,
       static_cast<uint8_t>((blockAndFNum >> 8)));  ///< Block and F-Num2
@@ -301,62 +658,58 @@ bool FmAudioSource::reservePitchChange(const NoteAssignment& assignment) {
 }
 
 void FmAudioSource::reserveUpdatingAllToneParameter() {
-  for (const std::size_t id : keyboard_.usedAssignIds()) {
-    if (kMaxChannelCount <= id) {
+  for (const std::size_t channel : keyboard_.usedAssignIds()) {
+    if (kMaxChannelCount <= channel) {
       // TODO: Fix polyphonic control
       return;
     }
 
-    const auto writeToBindedChannel =
-        [this, offset = kAddressOffsetTableForToneSet[id]](
-            std::uint16_t address, std::uint8_t data) {
-          std::lock_guard<std::mutex> guard(mutex_);
-          reservedChanges_.emplace_back(address | offset, data);
-        };
+    const auto writeToBindedChannel = [&](std::uint16_t address,
+                                          std::uint8_t data) {
+      const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
+      reservedChanges_.emplace_back(addressOfChannel(channel, address), data);
+    };
 
-    writeToBindedChannel(0xb0u, ((toneParameterState_.fb.value() & 7u) << 3) |
-                                    (toneParameterState_.al.value() & 7u));
+    writeToBindedChannel(0xb0u, (toneParameterState_.fb.rawValue() << 3) |
+                                    toneParameterState_.al.rawValue());
 
-    for (size_t n = 0; n < std::size(toneParameterState_.op); ++n) {
-      const auto& op = toneParameterState_.op[n];
-      const auto writeToBindedOperator =
-          [&writeToBindedChannel, offset = kOperatorAddressOffsetTable[n]](
-              std::uint16_t address, std::uint8_t data) {
-            writeToBindedChannel(address | offset, data);
-          };
+    for (std::size_t n = 0; n < std::size(defaultFmParameters.slot); ++n) {
+      const auto& op = toneParameterState_.slot[n];
+      const auto writeToBindedOperator = [&](std::uint16_t address,
+                                             std::uint8_t data) {
+        writeToBindedChannel(addressOfOperator(n, address), data);
+      };
 
-      const std::uint8_t rawDt =
-          (op.dt.value() < 0 ? 4u : 0u) |
-          (static_cast<std::uint8_t>(std::abs(op.dt.value())) & 3u);
-      writeToBindedOperator(0x30u, (rawDt << 4) | (op.ml.value() & 15u));
-      writeToBindedOperator(0x40u, op.tl.value() & 127u);
-      const std::uint8_t rawAr =
-          op.ssgeg.isEnabled ? 31u : (op.ar.value() & 31u);
-      writeToBindedOperator(0x50u, ((op.ks.value() & 3u) << 6) | rawAr);
-      writeToBindedOperator(0x60u, op.dr.value() & 31u);
-      writeToBindedOperator(0x70u, op.sr.value() & 31u);
-      writeToBindedOperator(
-          0x80u, ((op.sl.value() & 15u) << 4) | (op.rr.value() & 15u));
-      writeToBindedOperator(0x90, static_cast<std::uint8_t>(op.ssgeg.shape));
+      const std::uint8_t rawDt = convertDetuneAsRegisterValue(op.dt);
+      writeToBindedOperator(0x30u, (rawDt << 4) | op.ml.rawValue());
+      writeToBindedOperator(0x40u, op.tl.rawValue());
+      const std::uint8_t rawAr = op.ssgeg.isEnabled
+                                     ? parameter::AttackRateValue::kMaximum
+                                     : op.ar.rawValue();
+      writeToBindedOperator(0x50u, (op.ks.rawValue() << 6) | rawAr);
+      writeToBindedOperator(0x60u, op.dr.rawValue());
+      writeToBindedOperator(0x70u, op.sr.rawValue());
+      writeToBindedOperator(0x80u, (op.sl.rawValue() << 4) | op.rr.rawValue());
+      writeToBindedOperator(0x90, util::to_underlying(op.ssgeg.shape));
     }
 
     writeToBindedChannel(
-        0xb4u, kPanpotMask | ((toneParameterState_.lfo.ams.value() & 3u) << 4) |
-                   (toneParameterState_.lfo.pms.value() & 7u));
+        0xb4u, kPanpotMask | (toneParameterState_.lfo.ams.rawValue() << 4) |
+                   toneParameterState_.lfo.pms.rawValue());
   }
 
   {
-    std::lock_guard<std::mutex> guard(mutex_);
+    const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
     reservedChanges_.emplace_back(
         0x22u, (toneParameterState_.lfo.isEnabled ? 8u : 0u) |
-                   (toneParameterState_.lfo.frequency.value() & 7u));
+                   toneParameterState_.lfo.frequency.rawValue());
   }
 
   // Change note-on mask.
   std::uint8_t noteOnMask{};
-  for (std::size_t i = 0; i < std::size(toneParameterState_.op); ++i) {
+  for (std::size_t i = 0; i < std::size(defaultFmParameters.slot); ++i) {
     noteOnMask |=
-        (static_cast<std::uint8_t>(toneParameterState_.op[i].isEnabled) << i);
+        (static_cast<std::uint8_t>(toneParameterState_.slot[i].isEnabled) << i);
   }
   noteOnMask_.store(noteOnMask << 4);
 }

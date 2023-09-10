@@ -40,7 +40,7 @@ class RangedValue {
    *
    * @return Value.
    */
-  constexpr T value() const noexcept { return value_; }
+  constexpr T rawValue() const noexcept { return value_; }
 
   /**
    * @brief Set given value if it is valid.
@@ -67,19 +67,11 @@ class RangedValue {
     value_ = std::clamp(value, Minimum, Maximum);
   }
 
-  /**
-   * @brief Get minimum value.
-   *
-   * @return Minimum value.
-   */
-  constexpr T minimum() const noexcept { return Minimum; }
+  /// Minimum value.
+  static constexpr T kMinimum{Minimum};
 
-  /**
-   * @brief Get maximum value.
-   *
-   * @return Maximum value.
-   */
-  constexpr T maximum() const noexcept { return Maximum; }
+  /// Maximum value.
+  static constexpr T kMaximum{Maximum};
 
   auto operator<=>(const RangedValue&) const = default;
 
@@ -89,7 +81,7 @@ class RangedValue {
 
 template <Numeric T, T... Args>
 constexpr bool operator==(const RangedValue<T, Args...>& left, T right) {
-  return left.value() == right;
+  return left.rawValue() == right;
 }
 
 template <Numeric T, T... Args>
@@ -109,12 +101,12 @@ constexpr bool operator!=(T left, const RangedValue<T, Args...>& right) {
 
 template <Numeric T, T... Args>
 constexpr bool operator<(const RangedValue<T, Args...>& left, T right) {
-  return left.value() < right;
+  return left.rawValue() < right;
 }
 
 template <Numeric T, T... Args>
 constexpr bool operator<(T left, const RangedValue<T, Args...> right) {
-  return left < right.value();
+  return left < right.rawValue();
 }
 
 template <Numeric T, T... Args>
