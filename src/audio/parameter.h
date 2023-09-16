@@ -200,6 +200,7 @@ class ParameterVisiter {
 namespace audio {
 namespace parameter {
 // Value aliases.
+using PitchBendSensitivityValue = RangedValue<int, 1, 24>;
 using OperatorEnabledValue = ToggledValue;
 using AlgorithmValue = RangedValue<std::uint8_t, 0, 7>;
 using FeedbackValue = RangedValue<std::uint8_t, 0, 7>;

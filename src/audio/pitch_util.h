@@ -23,9 +23,6 @@ constexpr inline int kSemitoneCent{100};
 /// Range of pitch bend.
 constexpr inline int kMinPitchBend{-8192}, kMaxPitchBend{8191};
 
-/// Maximum value of pitch bend sensitivity.
-constexpr inline std::uint8_t kMaxPitchBendSensitivity{24u};
-
 /**
  * @brief Calculate MIDI note cent.
  * @param[in] noteNumber MIDI note number.
@@ -34,7 +31,7 @@ constexpr inline std::uint8_t kMaxPitchBendSensitivity{24u};
  * @return Cent from MIDI note number 0.
  */
 inline int calculateCent(int noteNumber, int pitchBend,
-                         std::uint8_t pitchBendSensitivity) {
+                         int pitchBendSensitivity) {
   return noteNumber * kSemitoneCent +
          kSemitoneCent * pitchBendSensitivity * pitchBend /
              ((pitchBend < 0) ? -kMinPitchBend : kMaxPitchBend);

@@ -194,19 +194,19 @@ void FmAudioSource::getNextAudioBlock(
 }
 
 // [Changes] -------------------------------------------------------------------
-bool FmAudioSource::tryReservePitchBendSensitivityChange(int value) {
-  if (pitchBendSensitivity_.load() == value) {
+bool FmAudioSource::tryReservePitchBendSensitivityChange(
+    const parameter::PitchBendSensitivityValue& value) {
+  if (std::lock_guard guard(parameterMutex_);
+      std::exchange(pitchBendSensitivity_, value) == value) {
     return false;
   }
-
-  pitchBendSensitivity_.store(static_cast<std::uint8_t>(value));
 
   return reservePitchChange();
 }
 
 bool FmAudioSource::tryReserveFeedbackChange(
     const parameter::FeedbackValue& value) {
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   if (std::exchange(toneParameterState_.fb, value) == value) {
     return false;
@@ -227,7 +227,7 @@ bool FmAudioSource::tryReserveFeedbackChange(
 
 bool FmAudioSource::tryReserveAlgorithmChange(
     const parameter::AlgorithmValue& value) {
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   if (std::exchange(toneParameterState_.al, value) == value) {
     return false;
@@ -253,7 +253,7 @@ bool FmAudioSource::tryReserveOperatorEnabledChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -287,7 +287,7 @@ bool FmAudioSource::tryReserveAttackRateChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -323,7 +323,7 @@ bool FmAudioSource::tryReserveDecayRateChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -352,7 +352,7 @@ bool FmAudioSource::tryReserveSustainRateChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -381,7 +381,7 @@ bool FmAudioSource::tryReserveReleaseRateChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -412,7 +412,7 @@ bool FmAudioSource::tryReserveSustainLevelChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -443,7 +443,7 @@ bool FmAudioSource::tryReserveTotalLevelChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -472,7 +472,7 @@ bool FmAudioSource::tryReserveKeyScaleChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -505,7 +505,7 @@ bool FmAudioSource::tryReserveMultipleChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -536,7 +536,7 @@ bool FmAudioSource::tryReserveDetuneChange(
     return false;
   }
 
-  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+  const std::scoped_lock guard{parameterMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -580,9 +580,11 @@ bool FmAudioSource::tryReserveChangeFromMidiMessage(
       return false;
     }
 
-    // Pitch bend is insensitive on channel.
-    pitchBendSensitivity_.store(
-        static_cast<std::uint8_t>(rpnMessage.parameterNumber));
+    {
+      // Pitch bend is insensitive on channel.
+      std::lock_guard pbsGuard(parameterMutex_);
+      pitchBendSensitivity_ = rpnMessage.parameterNumber;
+    }
 
     rpnDetector_.reset();
 
@@ -669,9 +671,12 @@ bool FmAudioSource::reservePitchChange(const NoteAssignment& assignment) {
   if (kMaxChannelCount < assignment.assignId) {
     return false;
   }
-
-  const int cent = pitch_util::calculateCent(
-      assignment.note.noteNumber, pitchBend_, pitchBendSensitivity_.load());
+  const auto pbs = [&] {
+    std::lock_guard guard(parameterMutex_);
+    return pitchBendSensitivity_.rawValue();
+  }();
+  const int cent =
+      pitch_util::calculateCent(assignment.note.noteNumber, pitchBend_, pbs);
   const std::uint16_t blockAndFNum = calculateFNumberAndBlockFromCent(cent);
 
   static const std::uint16_t kFNum1AddressTable[kMaxChannelCount]{

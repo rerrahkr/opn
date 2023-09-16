@@ -96,22 +96,6 @@ ParameterVisiter::ParameterVisiter(FmAudioSource& audioSource,
                                    juce::AudioProcessorValueTreeState& apvts)
     : audioSource_(audioSource), apvts_(apvts) {}
 
-void ParameterVisiter::operator()(parameter::PluginParameter parameter) {
-  switch (parameter) {
-    default:
-      break;
-
-    case parameter::PluginParameter::PitchBendSensitivity: {
-      audioSource_.tryReservePitchBendSensitivityChange(static_cast<int>(
-          apvts_
-              .getRawParameterValue(parameter::idAsString(
-                  parameter::PluginParameter::PitchBendSensitivity))
-              ->load()));
-      break;
-    }
-  }
-}
-
 namespace {
 template <class T>
 concept HasValueType = requires() { typename T::ValueType; };
@@ -138,6 +122,13 @@ auto parameterCast(From&& value) {
  */
 template <HasValueType T>
 auto getParameterValue(const juce::AudioProcessorValueTreeState& apvts,
+                       parameter::PluginParameter parameter) {
+  return parameterCast<T>(
+      apvts.getRawParameterValue(parameter::idAsString(parameter))->load());
+}
+
+template <HasValueType T>
+auto getParameterValue(const juce::AudioProcessorValueTreeState& apvts,
                        parameter::FmToneParameter parameter) {
   return parameterCast<T>(
       apvts.getRawParameterValue(parameter::idAsString(parameter))->load());
@@ -160,6 +151,19 @@ auto getParameterValue(const juce::AudioProcessorValueTreeState& apvts,
           ->load());
 }
 }  // namespace
+
+void ParameterVisiter::operator()(parameter::PluginParameter parameter) {
+  switch (parameter) {
+    default:
+      break;
+
+    case parameter::PluginParameter::PitchBendSensitivity:
+      audioSource_.tryReservePitchBendSensitivityChange(
+          getParameterValue<parameter::PitchBendSensitivityValue>(apvts_,
+                                                                  parameter));
+      break;
+  }
+}
 
 void ParameterVisiter::operator()(parameter::FmToneParameter parameter) {
   switch (parameter) {

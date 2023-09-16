@@ -72,7 +72,8 @@ class FmAudioSource : public juce::AudioSource {
    * @param[in] value A new value of pitch bend sensitivity.
    * @return @c true if change is accepted, otherwise @c false.
    */
-  bool tryReservePitchBendSensitivityChange(int value);
+  bool tryReservePitchBendSensitivityChange(
+      const parameter::PitchBendSensitivityValue& value);
 
   /**
    * @brief Try to reserve parameter change.
@@ -143,12 +144,14 @@ class FmAudioSource : public juce::AudioSource {
   /// Current pitch bend.
   int pitchBend_{0};
 
+  /// Mutex for parameters.
+  std::mutex parameterMutex_;
+
   /// Semitone range for pitch bend.
-  std::atomic_uint8_t pitchBendSensitivity_{2};
+  parameter::PitchBendSensitivityValue pitchBendSensitivity_{2};
 
   // State of tone parameters.
-  audio::FmParameters toneParameterState_;
-  std::mutex parameterStateMutex_;
+  FmParameters toneParameterState_;
 
   /// RPN/NRPN detector.
   juce::MidiRPNDetector rpnDetector_;

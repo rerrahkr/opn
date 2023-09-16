@@ -25,9 +25,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
 
   layout.add(std::make_unique<juce::AudioParameterInt>(
       ap::id(ap::PluginParameter::PitchBendSensitivity),
-      ap::name(ap::PluginParameter::PitchBendSensitivity), 1,
-      audio::pitch_util::kMaxPitchBendSensitivity,
-      kDefaultPitchBendSensitivity));
+      ap::name(ap::PluginParameter::PitchBendSensitivity),
+      ap::PitchBendSensitivityValue::kMinimum,
+      ap::PitchBendSensitivityValue::kMaximum, kDefaultPitchBendSensitivity));
 
   const auto& fmParameters = audio::defaultFmParameters;
 
