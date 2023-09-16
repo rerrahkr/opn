@@ -24,7 +24,7 @@ class RangedValue {
   using ValueType = T;
 
   /**
-   * @brief Constructor that the initial value is set to \c Minimum.
+   * @brief Constructor that the initial value is set to @c Minimum.
    */
   constexpr RangedValue() noexcept : value_(Minimum) {}
 
@@ -46,8 +46,8 @@ class RangedValue {
    * @brief Set given value if it is valid.
    *
    * @param value A new value.
-   * @return \c true if the value is changed. If a new value is out of range,
-   * returns \c false.
+   * @return @c true if the value is changed. If a new value is out of range,
+   * returns @c false.
    */
   constexpr bool trySetValue(T value) noexcept {
     if (value < Minimum || Maximum < value) {
@@ -80,61 +80,71 @@ class RangedValue {
 };
 
 template <Numeric T, T... Args>
-constexpr bool operator==(const RangedValue<T, Args...>& left, T right) {
+constexpr bool operator==(const RangedValue<T, Args...>& left,
+                          T right) noexcept {
   return left.rawValue() == right;
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator==(T left, const RangedValue<T, Args...>& right) {
+constexpr bool operator==(T left,
+                          const RangedValue<T, Args...>& right) noexcept {
   return right == left;
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator!=(const RangedValue<T, Args...>& left, T right) {
+constexpr bool operator!=(const RangedValue<T, Args...>& left,
+                          T right) noexcept {
   return !(left == right);
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator!=(T left, const RangedValue<T, Args...>& right) {
+constexpr bool operator!=(T left,
+                          const RangedValue<T, Args...>& right) noexcept {
   return right != left;
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator<(const RangedValue<T, Args...>& left, T right) {
+constexpr bool operator<(const RangedValue<T, Args...>& left,
+                         T right) noexcept {
   return left.rawValue() < right;
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator<(T left, const RangedValue<T, Args...> right) {
+constexpr bool operator<(T left, const RangedValue<T, Args...> right) noexcept {
   return left < right.rawValue();
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator>(const RangedValue<T, Args...>& left, T right) {
+constexpr bool operator>(const RangedValue<T, Args...>& left,
+                         T right) noexcept {
   return right < left;
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator>(T left, const RangedValue<T, Args...> right) {
+constexpr bool operator>(T left, const RangedValue<T, Args...> right) noexcept {
   return right < left;
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator<=(const RangedValue<T, Args...>& left, T right) {
+constexpr bool operator<=(const RangedValue<T, Args...>& left,
+                          T right) noexcept {
   return !(right < left);
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator<=(T left, const RangedValue<T, Args...> right) {
+constexpr bool operator<=(T left,
+                          const RangedValue<T, Args...> right) noexcept {
   return !(right < left);
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator>=(const RangedValue<T, Args...>& left, T right) {
+constexpr bool operator>=(const RangedValue<T, Args...>& left,
+                          T right) noexcept {
   return !(left < right);
 }
 
 template <Numeric T, T... Args>
-constexpr bool operator>=(T left, const RangedValue<T, Args...> right) {
+constexpr bool operator>=(T left,
+                          const RangedValue<T, Args...> right) noexcept {
   return !(left < right);
 }

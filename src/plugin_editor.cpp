@@ -53,7 +53,7 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
   addAndMakeVisible(alSlider_->slider);
 
   // Operator parameters.
-  for (std::size_t i = 0; i < std::size(operatorSliders_); ++i) {
+  for (std::size_t i = 0; i < audio::FmParameters::kSlotCount; ++i) {
     auto& sliderMap = operatorSliders_[i];
 
     using enum ap::FmOperatorParameter;
@@ -73,6 +73,15 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
               }));
       addAndMakeVisible(iter->second.slider);
     }
+
+    auto enabledButton = std::make_unique<ui::AttachedToggleButton>(
+        parameters, ap::idAsString(i, OperatorEnabled),
+        [&processor,
+         pair = ap::FmOperatorParameterWithSlot(i, OperatorEnabled)] {
+          processor.reserveParameterChange(pair);
+        });
+    addAndMakeVisible(enabledButton->button);
+    operatorEnabledButtons_[i] = std::move(enabledButton);
   }
 
   setSize(400, 300);
@@ -89,7 +98,7 @@ void PluginEditor::paint(juce::Graphics& g) {
 }
 
 void PluginEditor::resized() {
-  constexpr int kRowHeight{20}, kSliderWidth{120};
+  constexpr int kRowHeight{20}, kSliderWidth{120}, kToggleButtonWidth{20};
   int y{};
 
   pitchBendSensitivityLabel_->setBounds(0, y, 200, kRowHeight);
@@ -109,6 +118,11 @@ void PluginEditor::resized() {
       slider.slider.setBounds(0, y, kSliderWidth + 100, kRowHeight);
       y += kRowHeight;
     }
+  }
+
+  for (auto& button : operatorEnabledButtons_) {
+    button->button.setBounds(0, y, kToggleButtonWidth, kRowHeight);
+    y += kRowHeight;
   }
 }
 

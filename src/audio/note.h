@@ -58,7 +58,7 @@ struct Note {
 
   /**
    * @brief Check whether this note is note-on or off.
-   * @return \c true if note-on, otherwise \c false.
+   * @return @c true if note-on, otherwise @c false.
    */
   bool isNoteOn() const noexcept { return velocity != 0u; }
 };

@@ -10,15 +10,12 @@
 #include <memory>
 #include <unordered_map>
 
+#include "audio/parameter.h"
 #include "ui/attached_component.h"
 
 class Controller;
 struct EditorState;
 class PluginProcessor;
-
-namespace audio::parameter {
-enum class FmOperatorParameter;
-}
 
 //==============================================================================
 class PluginEditor : public juce::AudioProcessorEditor,
@@ -49,7 +46,10 @@ class PluginEditor : public juce::AudioProcessorEditor,
   std::unique_ptr<ui::AttachedSlider> alSlider_;
 
   std::unordered_map<audio::parameter::FmOperatorParameter, ui::AttachedSlider>
-      operatorSliders_[4];
+      operatorSliders_[audio::FmParameters::kSlotCount];
+
+  std::unique_ptr<ui::AttachedToggleButton>
+      operatorEnabledButtons_[audio::FmParameters::kSlotCount];
 
   std::unique_ptr<juce::Label> pitchBendSensitivityLabel_;
   std::unique_ptr<ui::AttachedSlider> pitchBendSensitivitySlider_;

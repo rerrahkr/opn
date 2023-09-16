@@ -70,7 +70,7 @@ class FmAudioSource : public juce::AudioSource {
    * @brief Try to reserve pitch bend sensitivity change.
    *
    * @param[in] value A new value of pitch bend sensitivity.
-   * @return \c true if change is accepted, otherwise \c false.
+   * @return @c true if change is accepted, otherwise @c false.
    */
   bool tryReservePitchBendSensitivityChange(int value);
 
@@ -88,6 +88,8 @@ class FmAudioSource : public juce::AudioSource {
    * @param[in] value Parameter value.
    * @return @c true if change is accepted, otherwise @c false.
    */
+  bool tryReserveOperatorEnabledChange(
+      std::size_t slot, const parameter::OperatorEnabledValue& value);
   bool tryReserveAttackRateChange(std::size_t slot,
                                   const parameter::AttackRateValue& value);
   bool tryReserveDecayRateChange(std::size_t slot,
@@ -110,8 +112,8 @@ class FmAudioSource : public juce::AudioSource {
   /**
    * @brief Try to reserve MIDI message after triggering.
    * @param[in] message MIDI message
-   * @return \c true if given message was used. If it was discareded, returns
-   * \c false.
+   * @return @c true if given message was used. If it was discareded, returns
+   * @c false.
    */
   bool tryReserveChangeFromMidiMessage(const juce::MidiMessage& message);
 
@@ -163,21 +165,21 @@ class FmAudioSource : public juce::AudioSource {
   /**
    * @brief Reserve register changes related on note-on event.
    * @param[in] assignment Details of note-on event.
-   * @return \c true if the reservation is success, otherwise \c false.
+   * @return @c true if the reservation is success, otherwise @c false.
    */
   bool reserveNoteOn(const NoteAssignment& assignment);
 
   /**
    * @brief Reserve register changes related on note-off event.
    * @param[in] assignment Details of note-off event.
-   * @return \c true if the reservation is success, otherwise \c false.
+   * @return @c true if the reservation is success, otherwise @c false.
    */
   bool reserveNoteOff(const NoteAssignment& assignment);
 
   /**
    * @brief Reserve register changes for all note-on notes related on pitch
    * change event.
-   * @return \c true if the reservation is success, otherwise \c false.
+   * @return @c true if the reservation is success, otherwise @c false.
    */
   bool reservePitchChange();
 
@@ -185,7 +187,7 @@ class FmAudioSource : public juce::AudioSource {
    * @brief Reserve register changes for a specific note related on pitch change
    * event.
    * @param[in] assignment Details of note whose pitch should be changed.
-   * @return \c true if the reservation is success, otherwise \c false.
+   * @return @c true if the reservation is success, otherwise @c false.
    */
   bool reservePitchChange(const NoteAssignment& assignment);
 

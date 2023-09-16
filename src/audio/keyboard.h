@@ -27,7 +27,7 @@ class Keyboard {
   /**
    * @brief Constructor.
    * @param[in] polyphony A number of polyphony. It must be greater than zero.
-   * @exception \c std::invalid_argument.
+   * @exception @c std::invalid_argument.
    */
   Keyboard(std::size_t polyphony);
 
@@ -37,9 +37,9 @@ class Keyboard {
    * at the same time. It must be greater than zero.
    * @return A list of note assignment which should be note-on by polyphony
    * change.
-   * @exception \c std::invalid_argument if \c newPolyphony is set to
+   * @exception @c std::invalid_argument if @c newPolyphony is set to
    * zero.
-   * @exception \c std::range_error if internal polyphony state is broken.
+   * @exception @c std::range_error if internal polyphony state is broken.
    */
   std::deque<NoteAssignment> setPolyphony(std::size_t newPolyphony);
 

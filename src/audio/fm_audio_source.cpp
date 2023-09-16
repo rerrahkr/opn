@@ -49,6 +49,15 @@ constexpr std::uint16_t addressOfOperator(std::size_t slot,
 }
 
 /**
+ * @brief Validate slot index.
+ * @param[in] slot Index of slot.
+ * @return @c true if the index is out of range, otherwise @c false.
+ */
+constexpr bool slotIndexIsOutOfRange(std::size_t slot) noexcept {
+  return audio::FmParameters::kSlotCount <= slot;
+}
+
+/**
  * @brief Convert detune value from signed to unsigned.
  * @param[in] value Signed detune value.
  * @return Unsigned detune value.
@@ -197,8 +206,7 @@ bool FmAudioSource::tryReservePitchBendSensitivityChange(int value) {
 
 bool FmAudioSource::tryReserveFeedbackChange(
     const parameter::FeedbackValue& value) {
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   if (std::exchange(toneParameterState_.fb, value) == value) {
     return false;
@@ -219,8 +227,7 @@ bool FmAudioSource::tryReserveFeedbackChange(
 
 bool FmAudioSource::tryReserveAlgorithmChange(
     const parameter::AlgorithmValue& value) {
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   if (std::exchange(toneParameterState_.al, value) == value) {
     return false;
@@ -240,14 +247,47 @@ bool FmAudioSource::tryReserveAlgorithmChange(
   return true;
 }
 
-bool FmAudioSource::tryReserveAttackRateChange(
-    std::size_t slot, const parameter::AttackRateValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+bool FmAudioSource::tryReserveOperatorEnabledChange(
+    std::size_t slot, const parameter::OperatorEnabledValue& value) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
+
+  auto& slotParameters = toneParameterState_.slot[slot];
+
+  if (std::exchange(slotParameters.isEnabled, value) == value) {
+    return false;
+  }
+
+  const std::uint8_t mask = 1u << (slot + 4u);
+  if (value) {
+    noteOnMask_.fetch_or(mask);
+  } else {
+    noteOnMask_.fetch_and(~mask);
+  }
+
+  for ([[maybe_unused]] const auto& [channel, _] : keyboard_.noteOns()) {
+    if (kMaxChannelCount <= channel) {
+      // TODO: Fix polyphonic control
+      continue;
+    }
+
+    reservedChanges_.emplace_back(
+        0x28u, kNoteOnChannelTable[channel] | noteOnMask_.load());
+  }
+
+  return true;
+}
+
+bool FmAudioSource::tryReserveAttackRateChange(
+    std::size_t slot, const parameter::AttackRateValue& value) {
+  if (slotIndexIsOutOfRange(slot)) {
+    return false;
+  }
+
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -279,12 +319,11 @@ bool FmAudioSource::tryReserveAttackRateChange(
 
 bool FmAudioSource::tryReserveDecayRateChange(
     std::size_t slot, const parameter::DecayRateValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -309,12 +348,11 @@ bool FmAudioSource::tryReserveDecayRateChange(
 
 bool FmAudioSource::tryReserveSustainRateChange(
     std::size_t slot, const parameter::SustainRateValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -339,12 +377,11 @@ bool FmAudioSource::tryReserveSustainRateChange(
 
 bool FmAudioSource::tryReserveReleaseRateChange(
     std::size_t slot, const parameter::ReleaseRateValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -371,12 +408,11 @@ bool FmAudioSource::tryReserveReleaseRateChange(
 
 bool FmAudioSource::tryReserveSustainLevelChange(
     std::size_t slot, const parameter::SustainLevelValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -403,12 +439,11 @@ bool FmAudioSource::tryReserveSustainLevelChange(
 
 bool FmAudioSource::tryReserveTotalLevelChange(
     std::size_t slot, const parameter::TotalLevelValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -433,12 +468,11 @@ bool FmAudioSource::tryReserveTotalLevelChange(
 
 bool FmAudioSource::tryReserveKeyScaleChange(
     std::size_t slot, const parameter::KeyScaleValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -467,12 +501,11 @@ bool FmAudioSource::tryReserveKeyScaleChange(
 
 bool FmAudioSource::tryReserveMultipleChange(
     std::size_t slot, const parameter::MultipleValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -499,12 +532,11 @@ bool FmAudioSource::tryReserveMultipleChange(
 
 bool FmAudioSource::tryReserveDetuneChange(
     std::size_t slot, const parameter::DetuneValue& value) {
-  if (std::size(defaultFmParameters.slot) <= slot) {
+  if (slotIndexIsOutOfRange(slot)) {
     return false;
   }
 
-  const std::lock_guard guard1(parameterStateMutex_),
-      guard2(reservedChangesMutex_);
+  const std::scoped_lock guard{parameterStateMutex_, reservedChangesMutex_};
 
   auto& slotParameters = toneParameterState_.slot[slot];
 
@@ -608,7 +640,7 @@ bool FmAudioSource::reserveNoteOn(const NoteAssignment& assignment) {
   // Set note-on.
   const std::lock_guard<std::mutex> guard(reservedChangesMutex_);
   reservedChanges_.emplace_back(
-      0x28u, kNoteOnChannelTable[assignment.assignId] | noteOnMask_);
+      0x28u, kNoteOnChannelTable[assignment.assignId] | noteOnMask_.load());
 
   return true;
 }
@@ -673,7 +705,7 @@ void FmAudioSource::reserveUpdatingAllToneParameter() {
     writeToBindedChannel(0xb0u, (toneParameterState_.fb.rawValue() << 3) |
                                     toneParameterState_.al.rawValue());
 
-    for (std::size_t n = 0; n < std::size(defaultFmParameters.slot); ++n) {
+    for (std::size_t n = 0; n < audio::FmParameters::kSlotCount; ++n) {
       const auto& op = toneParameterState_.slot[n];
       const auto writeToBindedOperator = [&](std::uint16_t address,
                                              std::uint8_t data) {
@@ -707,9 +739,10 @@ void FmAudioSource::reserveUpdatingAllToneParameter() {
 
   // Change note-on mask.
   std::uint8_t noteOnMask{};
-  for (std::size_t i = 0; i < std::size(defaultFmParameters.slot); ++i) {
-    noteOnMask |=
-        (static_cast<std::uint8_t>(toneParameterState_.slot[i].isEnabled) << i);
+  for (std::size_t i = 0; i < audio::FmParameters::kSlotCount; ++i) {
+    noteOnMask |= (static_cast<std::uint8_t>(
+                       toneParameterState_.slot[i].isEnabled.rawValue())
+                   << i);
   }
   noteOnMask_.store(noteOnMask << 4);
 }

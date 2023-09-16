@@ -9,6 +9,7 @@
 #include <variant>
 
 #include "../ranged_value.h"
+#include "../toggled_value.h"
 
 namespace audio {
 namespace parameter {
@@ -26,7 +27,7 @@ enum class PluginParameter {
 juce::ParameterID id(PluginParameter type);
 
 /**
- * @brief Get paraemter identifier as \c juce::String.
+ * @brief Get paraemter identifier as @c juce::String.
  *
  * @param[in] type parameter type.
  * @return Parameter identifier text.
@@ -61,7 +62,7 @@ enum class FmToneParameter {
 juce::ParameterID id(FmToneParameter type);
 
 /**
- * @brief Get paraemter identifier as \c juce::String.
+ * @brief Get paraemter identifier as @c juce::String.
  *
  * @param[in] type parameter type.
  * @return Parameter identifier text.
@@ -79,6 +80,7 @@ juce::String name(FmToneParameter type);
 //==============================================================================
 /// Parameters related to FM opeator.
 enum class FmOperatorParameter {
+  OperatorEnabled,
   Ar,
   Dr,
   Sr,
@@ -103,7 +105,7 @@ enum class FmOperatorParameter {
 juce::ParameterID id(std::size_t slot, FmOperatorParameter type);
 
 /**
- * @brief Get paraemter identifier as \c juce::String.
+ * @brief Get paraemter identifier as @c juce::String.
  *
  * @param[in] slot Slot number. It must be set between 0 and 3.
  * @param[in] type parameter type.
@@ -198,6 +200,7 @@ class ParameterVisiter {
 namespace audio {
 namespace parameter {
 // Value aliases.
+using OperatorEnabledValue = ToggledValue;
 using AlgorithmValue = RangedValue<std::uint8_t, 0, 7>;
 using FeedbackValue = RangedValue<std::uint8_t, 0, 7>;
 using AttackRateValue = RangedValue<std::uint8_t, 0, 31>;
@@ -224,6 +227,8 @@ struct FmParameters {
 
   /// Parameters related to operator.
   struct Operator {
+    parameter::OperatorEnabledValue isEnabled{
+        true};  ///< Whether this operator is enabled.
     parameter::AttackRateValue ar{31u};
     parameter::DecayRateValue dr{0u};
     parameter::SustainRateValue sr{0u};
@@ -243,11 +248,12 @@ struct FmParameters {
     Ssgeg ssgeg{};
 
     bool am{};
-
-    bool isEnabled{true};  ///< Whether this operator is enabled.
   };
 
-  Operator slot[4]{};
+  /// Slot count.
+  static constexpr std::size_t kSlotCount{4u};
+
+  Operator slot[kSlotCount]{};
 
   /// Parameters related on LFO.
   struct Lfo {

@@ -31,7 +31,7 @@ class ParameterChangeQueue {
    * @brief Dequeue parameter.
    *
    * @return Parameter.
-   * @exception \c std::range_error if the queue is empty.
+   * @exception @c std::range_error if the queue is empty.
    */
   audio::Parameter dequeue();
 
@@ -43,7 +43,7 @@ class ParameterChangeQueue {
   /**
    * @brief Whether the queue has no element.
    *
-   * @return \c true if the queue has no element, otherwise \c false.
+   * @return @c true if the queue has no element, otherwise @c false.
    */
   bool empty() const noexcept { return queue_.empty(); }
 

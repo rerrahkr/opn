@@ -11,7 +11,7 @@ namespace ui {
 class NestableGrid;
 
 /**
- * @brief Grid item for \c NestableGrid.
+ * @brief Grid item for @c NestableGrid.
  */
 class NestableGridItem : public juce::GridItem {
  public:
@@ -55,14 +55,14 @@ class NestableGridItem : public juce::GridItem {
 
   /**
    * @brief Get inner rectangle.
-   * @return A pointer of inner rectangle, or \c nullptr if this item does not
+   * @return A pointer of inner rectangle, or @c nullptr if this item does not
    * have a inner rectangle.
    */
   juce::Rectangle<int>* innerRectangle() const noexcept;
 
   /**
    * @brief Get inner grid.
-   * @return A pointer of inner grid, or \c nullptr if this item does not have a
+   * @return A pointer of inner grid, or @c nullptr if this item does not have a
    * inner grid.
    */
   NestableGrid* innerGrid() const noexcept;
@@ -84,19 +84,19 @@ class NestableGrid {
   void setGap(juce::Grid::Px sizeInPixels);
 
   /**
-   * @brief Define rows like \c grid-template-rows in CSS.
+   * @brief Define rows like @c grid-template-rows in CSS.
    * @param[in] rows Definition.
    */
   void setTemplateRows(const juce::Array<juce::Grid::TrackInfo>& rows);
 
   /**
-   * @brief Define columns like \c grid-template-columns in CSS.
+   * @brief Define columns like @c grid-template-columns in CSS.
    * @param[in] columns Definition.
    */
   void setTemplateColumns(const juce::Array<juce::Grid::TrackInfo>& columns);
 
   /**
-   * @brief Define areas like \c grid-template-areas in CSS.
+   * @brief Define areas like @c grid-template-areas in CSS.
    * @param[in] areas Definition.
    */
   void setTemplateAreas(const juce::StringArray& areas);

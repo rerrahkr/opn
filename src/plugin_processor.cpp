@@ -41,8 +41,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
       ap::AlgorithmValue::kMinimum, ap::AlgorithmValue::kMaximum,
       fmParameters.al.rawValue()));
 
-  for (std::size_t n = 0; n < std::size(audio::defaultFmParameters.slot); ++n) {
+  for (std::size_t n = 0; n < audio::FmParameters::kSlotCount; ++n) {
     const auto& slot = fmParameters.slot[n];
+
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        ap::id(n, ap::FmOperatorParameter::OperatorEnabled),
+        ap::name(n, ap::FmOperatorParameter::OperatorEnabled),
+        slot.isEnabled.rawValue()));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(
         ap::id(n, ap::FmOperatorParameter::Ar),

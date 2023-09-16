@@ -62,6 +62,8 @@ namespace {
 const std::unordered_map<FmOperatorParameter,
                          std::pair<juce::String, juce::String>>
     kOperatorIdNameLookUp_{
+        {FmOperatorParameter::OperatorEnabled,
+         {"operatorEnabled", "Operator Enabled"}},
         {FmOperatorParameter::Ar, {"ar", "Attack Rate"}},
         {FmOperatorParameter::Dr, {"dr", "Decay Rate"}},
         {FmOperatorParameter::Sr, {"sr", "Sustain Rate"}},
@@ -182,6 +184,12 @@ void ParameterVisiter::operator()(
     const parameter::FmOperatorParameterWithSlot& parameter) {
   switch (parameter.parameter) {
     using enum parameter::FmOperatorParameter;
+
+    case OperatorEnabled:
+      audioSource_.tryReserveOperatorEnabledChange(
+          parameter.slot, getParameterValue<parameter::OperatorEnabledValue>(
+                              apvts_, parameter.slot, parameter.parameter));
+      break;
 
     case Ar:
       audioSource_.tryReserveAttackRateChange(
