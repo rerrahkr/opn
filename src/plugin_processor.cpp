@@ -41,7 +41,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
       ap::AlgorithmValue::kMinimum, ap::AlgorithmValue::kMaximum,
       fmParameters.al.rawValue()));
 
-  for (std::size_t n = 0; n < audio::FmParameters::kSlotCount; ++n) {
+  for (std::size_t n = 0; n < audio::kSlotCount; ++n) {
     const auto& slot = fmParameters.slot[n];
 
     layout.add(std::make_unique<juce::AudioParameterBool>(
@@ -220,13 +220,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
   {
     // Reflect parameter changes modified by sliders.
-    std::lock_guard<std::mutex> guard(parameterQueueMutex_);
+    std::lock_guard guard{parameterQueueMutex_};
 
     if (!parameterChangeQueue_.empty()) {
       while (!parameterChangeQueue_.empty()) {
         auto&& parameter = parameterChangeQueue_.dequeue();
-        std::visit(audio::ParameterVisiter{*audioSource_, parameters_},
-                   parameter);
+        std::visit(
+            [this](const auto& param) {
+              audioSource_->tryReserveParameterChange(param);
+            },
+            parameter);
       }
 
       audioSource_->triggerReservedChanges();
@@ -302,7 +305,14 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 }
 
 //==============================================================================
-void PluginProcessor::reserveParameterChange(audio::Parameter parameter) {
-  std::lock_guard<std::mutex> guard(parameterQueueMutex_);
+// void PluginProcessor::reserveParameterChange(
+//     audio::ParameterTypeVariant parameter) {
+//   std::lock_guard<std::mutex> guard(parameterQueueMutex_);
+//   parameterChangeQueue_.enqueue(parameter);
+// }
+
+void PluginProcessor::reserveParameterChange(
+    const audio::parameter::ParameterVariant& parameter) {
+  std::lock_guard guard{parameterQueueMutex_};
   parameterChangeQueue_.enqueue(parameter);
 }

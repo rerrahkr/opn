@@ -60,8 +60,12 @@ class PluginProcessor : public juce::AudioProcessor {
   void setStateInformation(const void* data, int sizeInBytes) override;
 
   //============================================================================
-  /// Reserve parameter change.
-  void reserveParameterChange(audio::Parameter parameter);
+  /**
+   * @brief Reserve parameter change.
+   * @param[in] parameter Parameter change data.
+   */
+  void reserveParameterChange(
+      const audio::parameter::ParameterVariant& parameter);
 
  private:
   //============================================================================

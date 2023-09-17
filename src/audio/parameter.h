@@ -6,13 +6,93 @@
 #include <JuceHeader.h>
 
 #include <compare>
+#include <concepts>
+#include <utility>
 #include <variant>
 
 #include "../ranged_value.h"
 #include "../toggled_value.h"
 
 namespace audio {
+/// Slot count.
+static constexpr std::size_t kSlotCount{4u};
+
 namespace parameter {
+/**
+ * @brief Concept of parameter value.
+ */
+template <class T>
+concept ParameterValue = requires(T parameter) {
+  typename T::ValueType;
+  parameter.rawValue();
+};
+
+/**
+ * @brief Pair of slot number and parameter value.
+ */
+template <ParameterValue T>
+struct SlotAndValue {
+  RangedValue<std::size_t, 0, kSlotCount - 1u> slot;
+  T value;
+
+  /**
+   * @brief Constructor.
+   * @param[in] slot Slot number.
+   * @param[in] value Parameter value.
+   */
+  SlotAndValue(const decltype(slot)& slot, T&& value)
+      : slot(slot), value(std::forward<T>(value)) {}
+};
+
+// Parameter value types.
+struct PitchBendSensitivityValue : public RangedValue<int, 1, 24> {};
+
+struct OperatorEnabledValue : public ToggledValue {};
+struct AlgorithmValue : public RangedValue<std::uint8_t, 0, 7> {};
+struct FeedbackValue : public RangedValue<std::uint8_t, 0, 7> {};
+struct AttackRateValue : public RangedValue<std::uint8_t, 0, 31> {};
+struct DecayRateValue : public RangedValue<std::uint8_t, 0, 31> {};
+struct SustainRateValue : public RangedValue<std::uint8_t, 0, 31> {};
+struct ReleaseRateValue : public RangedValue<std::uint8_t, 0, 15> {};
+struct SustainLevelValue : public RangedValue<std::uint8_t, 0, 15> {};
+struct TotalLevelValue : public RangedValue<std::uint8_t, 0, 127> {};
+struct KeyScaleValue : public RangedValue<std::uint8_t, 0, 3> {};
+struct MultipleValue : public RangedValue<std::uint8_t, 0, 15> {};
+struct DetuneValue : public RangedValue<std::int8_t, -3, 3> {};
+
+struct LfoFrequency : public RangedValue<std::uint8_t, 0, 7> {};
+struct LfoPmsValue : public RangedValue<std::uint8_t, 0, 7> {};
+struct LfoAmsValue : public RangedValue<std::uint8_t, 0, 3> {};
+
+/**
+ * @brief Convert raw value to parameter value.
+ * @tparam To Target type.
+ * @tparam From Original type.
+ * @param[in] value Raw value.
+ * @return Casted value as @c To.
+ */
+template <ParameterValue To, typename From>
+  requires std::convertible_to<From, typename To::ValueType>
+auto parameterCast(From&& value) {
+  return To(static_cast<To::ValueType>(value));
+}
+
+/// Variant class of parameter values.
+using ParameterVariant =
+    std::variant<PitchBendSensitivityValue,
+
+                 AlgorithmValue, FeedbackValue,
+
+                 SlotAndValue<OperatorEnabledValue>,
+                 SlotAndValue<AttackRateValue>, SlotAndValue<DecayRateValue>,
+                 SlotAndValue<SustainRateValue>, SlotAndValue<ReleaseRateValue>,
+                 SlotAndValue<SustainLevelValue>, SlotAndValue<TotalLevelValue>,
+                 SlotAndValue<KeyScaleValue>, SlotAndValue<MultipleValue>,
+                 SlotAndValue<DetuneValue>/* ,
+
+                 SlotAndValue<LfoFrequency>, SlotAndValue<LfoPmsValue>,
+                 SlotAndValue<LfoAmsValue> */>;
+
 /// Parameters related to plugin behavior.
 enum class PluginParameter {
   PitchBendSensitivity,
@@ -122,38 +202,6 @@ juce::String idAsString(std::size_t slot, FmOperatorParameter type);
  */
 juce::String name(std::size_t slot, FmOperatorParameter type);
 
-/// The pair of FM operator's parameter and slot number.
-struct FmOperatorParameterWithSlot {
-  std::size_t slot;
-  FmOperatorParameter parameter;
-
-  /**
-   * @brief Constructor.
-   * @param[in] slot Slot number.
-   * @param[in] parameter Parameter.
-   */
-  FmOperatorParameterWithSlot(std::size_t slot, FmOperatorParameter parameter)
-      : slot(slot), parameter(parameter) {}
-
-  auto operator<=>(const FmOperatorParameterWithSlot&) const = default;
-};
-}  // namespace parameter
-}  // namespace audio
-
-namespace std {
-template <>
-struct hash<audio::parameter::FmOperatorParameterWithSlot> {
-  std::size_t operator()(
-      const audio::parameter::FmOperatorParameterWithSlot& parameter) const {
-    return std::hash<std::string>()(
-        std::to_string(parameter.slot) + "," +
-        std::to_string(static_cast<int>(parameter.parameter)));
-  }
-};
-}  // namespace std
-
-namespace audio {
-namespace parameter {
 /// Shape of SSG-EG.
 enum class SsgegShape : std::uint8_t {
   DownwardSaw = 8,
@@ -168,57 +216,6 @@ enum class SsgegShape : std::uint8_t {
 }  // namespace parameter
 
 //==============================================================================
-/// Parameter helper type which contains any parameter.
-using Parameter =
-    std::variant<parameter::PluginParameter, parameter::FmToneParameter,
-                 parameter::FmOperatorParameterWithSlot>;
-
-class FmAudioSource;
-
-/// Visitor functions for parameter helper type.
-class ParameterVisiter {
- public:
-  /**
-   * @brief Constructor.
-   * @param[in] audioSource Audio source.
-   * @param[in] apvts Parameter state of plugin.
-   */
-  ParameterVisiter(FmAudioSource& audioSource,
-                   juce::AudioProcessorValueTreeState& apvts);
-
-  void operator()(parameter::PluginParameter parameter);
-  void operator()(parameter::FmToneParameter parameter);
-  void operator()(const parameter::FmOperatorParameterWithSlot& parameter);
-
- private:
-  FmAudioSource& audioSource_;
-  juce::AudioProcessorValueTreeState& apvts_;
-};
-}  // namespace audio
-
-//==============================================================================
-namespace audio {
-namespace parameter {
-// Value aliases.
-using PitchBendSensitivityValue = RangedValue<int, 1, 24>;
-using OperatorEnabledValue = ToggledValue;
-using AlgorithmValue = RangedValue<std::uint8_t, 0, 7>;
-using FeedbackValue = RangedValue<std::uint8_t, 0, 7>;
-using AttackRateValue = RangedValue<std::uint8_t, 0, 31>;
-using DecayRateValue = RangedValue<std::uint8_t, 0, 31>;
-using SustainRateValue = RangedValue<std::uint8_t, 0, 31>;
-using ReleaseRateValue = RangedValue<std::uint8_t, 0, 15>;
-using SustainLevelValue = RangedValue<std::uint8_t, 0, 15>;
-using TotalLevelValue = RangedValue<std::uint8_t, 0, 127>;
-using KeyScaleValue = RangedValue<std::uint8_t, 0, 3>;
-using MultipleValue = RangedValue<std::uint8_t, 0, 15>;
-using DetuneValue = RangedValue<std::int8_t, -3, 3>;
-
-using LfoFrequency = RangedValue<std::uint8_t, 0, 7>;
-using LfoPmsValue = RangedValue<std::uint8_t, 0, 7>;
-using LfoAmsValue = RangedValue<std::uint8_t, 0, 3>;
-}  // namespace parameter
-
 /**
  * @brief FM parameters.
  */
@@ -250,9 +247,6 @@ struct FmParameters {
 
     bool am{};
   };
-
-  /// Slot count.
-  static constexpr std::size_t kSlotCount{4u};
 
   Operator slot[kSlotCount]{};
 

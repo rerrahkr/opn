@@ -6,17 +6,12 @@
 #include <JuceHeader.h>
 
 #include <list>
-#include <stdexcept>
 #include <unordered_map>
 
 #include "audio/parameter.h"
 
-namespace audio {
-class FmAudioSource;
-}
-
 /**
- * @brief FIFO queue of parameters whoose element is unique.
+ * @brief FIFO queue of parameters whoose element type is unique.
  */
 class ParameterChangeQueue {
  public:
@@ -25,7 +20,7 @@ class ParameterChangeQueue {
    *
    * @param[in] parameter Parameter.
    */
-  void enqueue(const audio::Parameter& parameter);
+  void enqueue(const audio::parameter::ParameterVariant& parameter);
 
   /**
    * @brief Dequeue parameter.
@@ -33,7 +28,7 @@ class ParameterChangeQueue {
    * @return Parameter.
    * @exception @c std::range_error if the queue is empty.
    */
-  audio::Parameter dequeue();
+  audio::parameter::ParameterVariant dequeue();
 
   /**
    * @brief Clear the queue.
@@ -49,8 +44,12 @@ class ParameterChangeQueue {
 
  private:
   /// Front-In, Back-Out queue.
-  std::list<audio::Parameter> queue_;
+  std::list<audio::parameter::ParameterVariant> queue_;
 
-  /// Unique element map of queue.
-  std::unordered_map<audio::Parameter, decltype(queue_.begin())> map_;
+  /**
+   * @brief Unique element map of queue.
+   *        Key is index of type in parameter value variant.
+   *        Value is iterator of parameter value in @c queue_.
+   */
+  std::unordered_map<std::size_t, decltype(queue_)::iterator> map_;
 };

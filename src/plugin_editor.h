@@ -46,10 +46,10 @@ class PluginEditor : public juce::AudioProcessorEditor,
   std::unique_ptr<ui::AttachedSlider> alSlider_;
 
   std::unordered_map<audio::parameter::FmOperatorParameter, ui::AttachedSlider>
-      operatorSliders_[audio::FmParameters::kSlotCount];
+      operatorSliders_[audio::kSlotCount];
 
   std::unique_ptr<ui::AttachedToggleButton>
-      operatorEnabledButtons_[audio::FmParameters::kSlotCount];
+      operatorEnabledButtons_[audio::kSlotCount];
 
   std::unique_ptr<juce::Label> pitchBendSensitivityLabel_;
   std::unique_ptr<ui::AttachedSlider> pitchBendSensitivitySlider_;

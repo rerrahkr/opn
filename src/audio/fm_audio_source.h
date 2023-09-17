@@ -6,20 +6,18 @@
 #include <JuceHeader.h>
 #include <ymfm_opn.h>
 
-#include <algorithm>
 #include <atomic>
-#include <concepts>
 #include <memory>
 #include <mutex>
-#include <set>
-#include <tuple>
-#include <utility>
 #include <vector>
 
 #include "../ranged_value.h"
 #include "keyboard.h"
 #include "parameter.h"
-#include "register.h"
+
+namespace audio {
+struct Register;
+}
 
 namespace audio {
 /**
@@ -67,48 +65,42 @@ class FmAudioSource : public juce::AudioSource {
 
   // [Changes] -----------------------------------------------------------------
   /**
-   * @brief Try to reserve pitch bend sensitivity change.
-   *
-   * @param[in] value A new value of pitch bend sensitivity.
+   * @brief Try to reserve parameter change.
+   * @param[in] value Parameter value.
    * @return @c true if change is accepted, otherwise @c false.
    */
-  bool tryReservePitchBendSensitivityChange(
+  bool tryReserveParameterChange(
       const parameter::PitchBendSensitivityValue& value);
+  bool tryReserveParameterChange(const parameter::FeedbackValue& value);
+  bool tryReserveParameterChange(const parameter::AlgorithmValue& value);
 
   /**
    * @brief Try to reserve parameter change.
-   * @param[in] value Parameter value.
+   * @param[in] slotAndValue Slot number and parameter value.
    * @return @c true if change is accepted, otherwise @c false.
    */
-  bool tryReserveFeedbackChange(const parameter::FeedbackValue& value);
-  bool tryReserveAlgorithmChange(const parameter::AlgorithmValue& value);
-
-  /**
-   * @brief Try to reserve parameter change.
-   * @param[in] slot Slot number.
-   * @param[in] value Parameter value.
-   * @return @c true if change is accepted, otherwise @c false.
-   */
-  bool tryReserveOperatorEnabledChange(
-      std::size_t slot, const parameter::OperatorEnabledValue& value);
-  bool tryReserveAttackRateChange(std::size_t slot,
-                                  const parameter::AttackRateValue& value);
-  bool tryReserveDecayRateChange(std::size_t slot,
-                                 const parameter::DecayRateValue& value);
-  bool tryReserveSustainRateChange(std::size_t slot,
-                                   const parameter::SustainRateValue& value);
-  bool tryReserveReleaseRateChange(std::size_t slot,
-                                   const parameter::ReleaseRateValue& value);
-  bool tryReserveSustainLevelChange(std::size_t slot,
-                                    const parameter::SustainLevelValue& value);
-  bool tryReserveTotalLevelChange(std::size_t slot,
-                                  const parameter::TotalLevelValue& value);
-  bool tryReserveKeyScaleChange(std::size_t slot,
-                                const parameter::KeyScaleValue& value);
-  bool tryReserveMultipleChange(std::size_t slot,
-                                const parameter::MultipleValue& value);
-  bool tryReserveDetuneChange(std::size_t slot,
-                              const parameter::DetuneValue& value);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::OperatorEnabledValue>&
+          slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::AttackRateValue>& slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::DecayRateValue>& slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::SustainRateValue>& slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::ReleaseRateValue>& slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::SustainLevelValue>&
+          slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::TotalLevelValue>& slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::KeyScaleValue>& slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::MultipleValue>& slotAndValue);
+  bool tryReserveParameterChange(
+      const parameter::SlotAndValue<parameter::DetuneValue>& slotAndValue);
 
   /**
    * @brief Try to reserve MIDI message after triggering.

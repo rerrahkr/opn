@@ -28,9 +28,10 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
   addAndMakeVisible(pitchBendSensitivityLabel_.get());
   pitchBendSensitivitySlider_ = std::make_unique<ui::AttachedSlider>(
       juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft, parameters,
-      ap::idAsString(ap::PluginParameter::PitchBendSensitivity), [&processor] {
+      ap::idAsString(ap::PluginParameter::PitchBendSensitivity),
+      [&processor](float newValue) {
         processor.reserveParameterChange(
-            ap::PluginParameter::PitchBendSensitivity);
+            ap::parameterCast<ap::PitchBendSensitivityValue>(newValue));
       });
   addAndMakeVisible(pitchBendSensitivitySlider_->slider);
 
@@ -39,49 +40,72 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
   addAndMakeVisible(fbLabel_.get());
   fbSlider_ = std::make_unique<ui::AttachedSlider>(
       juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight, parameters,
-      ap::idAsString(ap::FmToneParameter::Fb), [&processor] {
-        processor.reserveParameterChange(ap::FmToneParameter::Fb);
+      ap::idAsString(ap::FmToneParameter::Fb), [&processor](float newValue) {
+        processor.reserveParameterChange(
+            ap::parameterCast<ap::FeedbackValue>(newValue));
       });
   addAndMakeVisible(fbSlider_->slider);
 
   // Algorithm.
   alSlider_ = std::make_unique<ui::AttachedSlider>(
       juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft, parameters,
-      ap::idAsString(ap::FmToneParameter::Al), [&processor] {
-        processor.reserveParameterChange(ap::FmToneParameter::Al);
+      ap::idAsString(ap::FmToneParameter::Al), [&processor](float newValue) {
+        processor.reserveParameterChange(
+            ap::parameterCast<ap::AlgorithmValue>(newValue));
       });
   addAndMakeVisible(alSlider_->slider);
 
   // Operator parameters.
-  for (std::size_t i = 0; i < audio::FmParameters::kSlotCount; ++i) {
-    auto& sliderMap = operatorSliders_[i];
-
-    using enum ap::FmOperatorParameter;
-    constexpr ap::FmOperatorParameter parameterTypes[]{
-        Ar, Dr, Sr, Rr, Sl, Tl, Ks, Ml, Dt,
-    };
-
-    for (const auto parameterType : parameterTypes) {
-      [[maybe_unused]] auto [iter, _] = sliderMap.emplace(
-          std::piecewise_construct, std::forward_as_tuple(parameterType),
-          std::forward_as_tuple(
-              juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight,
-              parameters, ap::idAsString(i, parameterType),
-              [&processor,
-               pair = ap::FmOperatorParameterWithSlot(i, parameterType)] {
-                processor.reserveParameterChange(pair);
-              }));
-      addAndMakeVisible(iter->second.slider);
-    }
-
+  for (std::size_t i = 0; i < audio::kSlotCount; ++i) {
     auto enabledButton = std::make_unique<ui::AttachedToggleButton>(
-        parameters, ap::idAsString(i, OperatorEnabled),
-        [&processor,
-         pair = ap::FmOperatorParameterWithSlot(i, OperatorEnabled)] {
-          processor.reserveParameterChange(pair);
+        parameters, ap::idAsString(i, ap::FmOperatorParameter::OperatorEnabled),
+        [&processor, i](float newValue) {
+          processor.reserveParameterChange(ap::SlotAndValue(
+              i, ap::parameterCast<ap::OperatorEnabledValue>(newValue)));
         });
     addAndMakeVisible(enabledButton->button);
     operatorEnabledButtons_[i] = std::move(enabledButton);
+
+    // Slider initialization lambda for operator parameters.
+    static const auto initializeSlider =
+        [&](std::size_t slot, ap::FmOperatorParameter parameterType,
+            auto conversion) {
+          [[maybe_unused]] auto [iter, _] = operatorSliders_[slot].emplace(
+              std::piecewise_construct, std::forward_as_tuple(parameterType),
+              std::forward_as_tuple(
+                  juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight,
+                  parameters, ap::idAsString(slot, parameterType),
+                  [&processor, slot, conversion](float newValue) {
+                    processor.reserveParameterChange(
+                        ap::SlotAndValue{slot, conversion(newValue)});
+                  }));
+          addAndMakeVisible(iter->second.slider);
+        };
+
+    initializeSlider(i, ap::FmOperatorParameter::Ar, [](float newValue) {
+      return ap::parameterCast<ap::AttackRateValue>(newValue);
+    });
+    initializeSlider(i, ap::FmOperatorParameter::Dr, [](float newValue) {
+      return ap::parameterCast<ap::DecayRateValue>(newValue);
+    });
+    initializeSlider(i, ap::FmOperatorParameter::Sr, [](float newValue) {
+      return ap::parameterCast<ap::SustainRateValue>(newValue);
+    });
+    initializeSlider(i, ap::FmOperatorParameter::Rr, [](float newValue) {
+      return ap::parameterCast<ap::ReleaseRateValue>(newValue);
+    });
+    initializeSlider(i, ap::FmOperatorParameter::Sl, [](float newValue) {
+      return ap::parameterCast<ap::SustainLevelValue>(newValue);
+    });
+    initializeSlider(i, ap::FmOperatorParameter::Tl, [](float newValue) {
+      return ap::parameterCast<ap::AttackRateValue>(newValue);
+    });
+    initializeSlider(i, ap::FmOperatorParameter::Ks, [](float newValue) {
+      return ap::parameterCast<ap::KeyScaleValue>(newValue);
+    });
+    initializeSlider(i, ap::FmOperatorParameter::Dt, [](float newValue) {
+      return ap::parameterCast<ap::DetuneValue>(newValue);
+    });
   }
 
   setSize(400, 300);

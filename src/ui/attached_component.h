@@ -14,7 +14,7 @@ namespace ui {
 struct AttachedSlider : public AudioProcessorValueTreeState::Listener {
   juce::Slider slider;
   juce::AudioProcessorValueTreeState::SliderAttachment attachment;
-  std::function<void()> onValueChanged;
+  std::function<void(float)> onValueChanged;
 
   /**
    * @brief Constructor.
@@ -26,7 +26,7 @@ struct AttachedSlider : public AudioProcessorValueTreeState::Listener {
    */
   AttachedSlider(juce::AudioProcessorValueTreeState& parameters,
                  const juce::String& parameterId,
-                 const std::function<void()> onValueChanged)
+                 const std::function<void(float)> onValueChanged)
       : attachment(parameters, parameterId, slider),
         onValueChanged(onValueChanged) {
     parameters.addParameterListener(parameterId, this);
@@ -46,7 +46,7 @@ struct AttachedSlider : public AudioProcessorValueTreeState::Listener {
                  juce::Slider::TextEntryBoxPosition textBoxPosition,
                  juce::AudioProcessorValueTreeState& parameters,
                  const juce::String& parameterId,
-                 const std::function<void()> onValueChanged)
+                 const std::function<void(float)> onValueChanged)
       : slider(style, textBoxPosition),
         attachment(parameters, parameterId, slider),
         onValueChanged(onValueChanged) {
@@ -54,9 +54,9 @@ struct AttachedSlider : public AudioProcessorValueTreeState::Listener {
   }
 
   void parameterChanged(const String& /*parameterID*/,
-                        float /*newValue*/) override {
+                        float newValue) override {
     if (onValueChanged) {
-      onValueChanged();
+      onValueChanged(newValue);
     }
   }
 
@@ -70,7 +70,7 @@ struct AttachedToggleButton
     : public juce::AudioProcessorValueTreeState::Listener {
   juce::ToggleButton button;
   juce::AudioProcessorValueTreeState::ButtonAttachment attachment;
-  std::function<void()> onValueChanged;
+  std::function<void(float)> onValueChanged;
 
   /**
    * @brief Constructor.
@@ -82,16 +82,16 @@ struct AttachedToggleButton
    */
   AttachedToggleButton(juce::AudioProcessorValueTreeState& parameters,
                        const juce::String& parameterId,
-                       const std::function<void()> onValueChanged)
+                       const std::function<void(float)> onValueChanged)
       : attachment(parameters, parameterId, button),
         onValueChanged(onValueChanged) {
     parameters.addParameterListener(parameterId, this);
   }
 
   void parameterChanged(const String& /*parameterID*/,
-                        float /*newValue*/) override {
+                        float newValue) override {
     if (onValueChanged) {
-      onValueChanged();
+      onValueChanged(newValue);
     }
   }
 
