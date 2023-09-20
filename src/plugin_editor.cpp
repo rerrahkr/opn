@@ -5,7 +5,6 @@
 
 #include "plugin_editor.h"
 
-#include "audio/parameter.h"
 #include "controller.h"
 #include "model.h"
 #include "plugin_processor.h"

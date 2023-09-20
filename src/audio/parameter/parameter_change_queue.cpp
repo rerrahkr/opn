@@ -5,6 +5,8 @@
 
 #include <stdexcept>
 
+namespace audio {
+namespace parameter {
 void ParameterChangeQueue::enqueue(
     const audio::parameter::ParameterVariant& parameter) {
   const std::size_t typeIndex = parameter.index();
@@ -34,3 +36,5 @@ void ParameterChangeQueue::clear() {
   map_.clear();
   queue_.clear();
 }
+}  // namespace parameter
+}  // namespace audio

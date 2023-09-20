@@ -12,8 +12,8 @@
 #include <vector>
 
 #include "../ranged_value.h"
+#include "./parameter/parameter.h"
 #include "keyboard.h"
-#include "parameter.h"
 
 namespace audio {
 struct Register;

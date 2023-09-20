@@ -10,8 +10,8 @@
 #include <utility>
 #include <variant>
 
-#include "../ranged_value.h"
-#include "../toggled_value.h"
+#include "../../ranged_value.h"
+#include "../../toggled_value.h"
 
 namespace audio {
 /// Slot count.

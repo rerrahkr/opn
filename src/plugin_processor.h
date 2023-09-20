@@ -10,8 +10,8 @@
 #include <memory>
 #include <mutex>
 
-#include "audio/parameter.h"
-#include "parameter_change_queue.h"
+#include "audio/parameter/parameter.h"
+#include "audio/parameter/parameter_change_queue.h"
 
 class Controller;
 class Model;
@@ -88,7 +88,7 @@ class PluginProcessor : public juce::AudioProcessor {
   std::mutex parameterQueueMutex_;
 
   /// Queue storing notifications of parameter change.
-  ParameterChangeQueue parameterChangeQueue_;
+  audio::parameter::ParameterChangeQueue parameterChangeQueue_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

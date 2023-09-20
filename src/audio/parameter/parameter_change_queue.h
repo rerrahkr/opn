@@ -8,8 +8,10 @@
 #include <list>
 #include <unordered_map>
 
-#include "audio/parameter.h"
+#include "parameter.h"
 
+namespace audio {
+namespace parameter {
 /**
  * @brief FIFO queue of parameters whoose element type is unique.
  */
@@ -20,7 +22,7 @@ class ParameterChangeQueue {
    *
    * @param[in] parameter Parameter.
    */
-  void enqueue(const audio::parameter::ParameterVariant& parameter);
+  void enqueue(const ParameterVariant& parameter);
 
   /**
    * @brief Dequeue parameter.
@@ -28,7 +30,7 @@ class ParameterChangeQueue {
    * @return Parameter.
    * @exception @c std::range_error if the queue is empty.
    */
-  audio::parameter::ParameterVariant dequeue();
+  ParameterVariant dequeue();
 
   /**
    * @brief Clear the queue.
@@ -44,7 +46,7 @@ class ParameterChangeQueue {
 
  private:
   /// Front-In, Back-Out queue.
-  std::list<audio::parameter::ParameterVariant> queue_;
+  std::list<ParameterVariant> queue_;
 
   /**
    * @brief Unique element map of queue.
@@ -53,3 +55,5 @@ class ParameterChangeQueue {
    */
   std::unordered_map<std::size_t, decltype(queue_)::iterator> map_;
 };
+}  // namespace parameter
+}  // namespace audio

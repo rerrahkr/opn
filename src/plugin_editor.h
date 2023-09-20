@@ -10,7 +10,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "audio/parameter.h"
+#include "audio/parameter/parameter.h"
 #include "ui/attached_component.h"
 
 class Controller;
