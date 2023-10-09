@@ -105,7 +105,7 @@ class FmAudioSource : public juce::AudioSource {
   /**
    * @brief Try to reserve MIDI message after triggering.
    * @param[in] message MIDI message
-   * @return @c true if given message was used. If it was discareded, returns
+   * @return @c true if given message was used. If it was discarded, returns
    * @c false.
    */
   bool tryReserveChangeFromMidiMessage(const juce::MidiMessage& message);
@@ -117,7 +117,7 @@ class FmAudioSource : public juce::AudioSource {
   void triggerReservedChanges();
 
  private:
-  /// Emutator.
+  /// Emulator.
   std::unique_ptr<ymfm::ym2608> ym2608_;
 
   /// Emulator interface.

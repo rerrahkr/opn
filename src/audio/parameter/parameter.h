@@ -107,7 +107,7 @@ enum class PluginParameter {
 juce::ParameterID id(PluginParameter type);
 
 /**
- * @brief Get paraemter identifier as @c juce::String.
+ * @brief Get parameter identifier as @c juce::String.
  *
  * @param[in] type parameter type.
  * @return Parameter identifier text.
@@ -142,7 +142,7 @@ enum class FmToneParameter {
 juce::ParameterID id(FmToneParameter type);
 
 /**
- * @brief Get paraemter identifier as @c juce::String.
+ * @brief Get parameter identifier as @c juce::String.
  *
  * @param[in] type parameter type.
  * @return Parameter identifier text.
@@ -158,7 +158,7 @@ juce::String idAsString(FmToneParameter type);
 juce::String name(FmToneParameter type);
 
 //==============================================================================
-/// Parameters related to FM opeator.
+/// Parameters related to FM operator.
 enum class FmOperatorParameter {
   OperatorEnabled,
   Ar,
@@ -185,7 +185,7 @@ enum class FmOperatorParameter {
 juce::ParameterID id(std::size_t slot, FmOperatorParameter type);
 
 /**
- * @brief Get paraemter identifier as @c juce::String.
+ * @brief Get parameter identifier as @c juce::String.
  *
  * @param[in] slot Slot number. It must be set between 0 and 3.
  * @param[in] type parameter type.

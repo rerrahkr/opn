@@ -26,7 +26,7 @@ class Controller : private juce::MessageListener {
 
   /**
    * @brief Handle message from the view.
-   * @param[in] message Mesage from the view.
+   * @param[in] message Message from the view.
    */
   void handleMessage(const juce::Message& message) override;
 

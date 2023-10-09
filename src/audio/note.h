@@ -36,7 +36,7 @@ struct Note {
         velocity(message.isNoteOn() ? message.getVelocity() : 0u) {}
 
   /**
-   * @brief Generatenote on.
+   * @brief Generate note on.
    * @param[in] channel Channel.
    * @param[in] noteNumber Note number.
    * @param[in] velocity Velocity.

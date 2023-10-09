@@ -13,7 +13,7 @@
 namespace audio {
 namespace parameter {
 /**
- * @brief FIFO queue of parameters whoose element type is unique.
+ * @brief FIFO queue of parameters whose element type is unique.
  */
 class ParameterChangeQueue {
  public:

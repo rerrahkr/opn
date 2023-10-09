@@ -38,7 +38,7 @@ inline int calculateCent(int noteNumber, int pitchBend,
 }
 
 /**
- * @brief Calclulate frequency from cent.
+ * @brief Calculate frequency from cent.
  * @param[in] cent Cent from MIDI note number 0.
  * @return Frequency (Hz.)
  */

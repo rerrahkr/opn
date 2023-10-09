@@ -178,8 +178,8 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 
   resampler_ = std::make_unique<juce::ResamplingAudioSource>(
       audioSource_.get(), false, getMainBusNumOutputChannels());
-  const auto synrate = audioSource_->synthesisRate();
-  const auto ratio = synrate / sampleRate;
+  const auto synRate = audioSource_->synthesisRate();
+  const auto ratio = synRate / sampleRate;
   resampler_->setResamplingRatio(ratio);
   resampler_->prepareToPlay(samplesPerBlock, sampleRate);
 }

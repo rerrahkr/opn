@@ -66,7 +66,7 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
     operatorEnabledButtons_[i] = std::move(enabledButton);
 
     // Slider initialization lambda for operator parameters.
-    static const auto initializeSlider =
+    static const auto initialiseSlider =
         [&](std::size_t slot, ap::FmOperatorParameter parameterType,
             auto conversion) {
           [[maybe_unused]] auto [iter, _] = operatorSliders_[slot].emplace(
@@ -81,28 +81,28 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
           addAndMakeVisible(iter->second.slider);
         };
 
-    initializeSlider(i, ap::FmOperatorParameter::Ar, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Ar, [](float newValue) {
       return ap::parameterCast<ap::AttackRateValue>(newValue);
     });
-    initializeSlider(i, ap::FmOperatorParameter::Dr, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Dr, [](float newValue) {
       return ap::parameterCast<ap::DecayRateValue>(newValue);
     });
-    initializeSlider(i, ap::FmOperatorParameter::Sr, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Sr, [](float newValue) {
       return ap::parameterCast<ap::SustainRateValue>(newValue);
     });
-    initializeSlider(i, ap::FmOperatorParameter::Rr, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Rr, [](float newValue) {
       return ap::parameterCast<ap::ReleaseRateValue>(newValue);
     });
-    initializeSlider(i, ap::FmOperatorParameter::Sl, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Sl, [](float newValue) {
       return ap::parameterCast<ap::SustainLevelValue>(newValue);
     });
-    initializeSlider(i, ap::FmOperatorParameter::Tl, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Tl, [](float newValue) {
       return ap::parameterCast<ap::AttackRateValue>(newValue);
     });
-    initializeSlider(i, ap::FmOperatorParameter::Ks, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Ks, [](float newValue) {
       return ap::parameterCast<ap::KeyScaleValue>(newValue);
     });
-    initializeSlider(i, ap::FmOperatorParameter::Dt, [](float newValue) {
+    initialiseSlider(i, ap::FmOperatorParameter::Dt, [](float newValue) {
       return ap::parameterCast<ap::DetuneValue>(newValue);
     });
   }

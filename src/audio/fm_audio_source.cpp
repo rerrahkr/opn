@@ -63,8 +63,8 @@ inline std::uint8_t convertDetuneAsRegisterValue(
          static_cast<std::uint8_t>(std::abs(value.rawValue()));
 }
 
-/// Mask of panpot set at $b4-$b6. This means "we set panpot to center."
-constexpr std::uint8_t kPanpotMask{0xf0u};
+/// Mask of panning set at $b4-$b6. This means "we set panning to center."
+constexpr std::uint8_t kPanningMask{0xf0u};
 
 /**
  * @brief Look-up table used to control note on/off control in the low nibble of
@@ -77,7 +77,7 @@ constexpr std::uint8_t kNoteOnChannelTable[kMaxChannelCount]{
 constexpr std::size_t kDefaultPolyphony{kMaxChannelCount};
 
 /**
- * @brief Calculate F-Number of givien frequency.
+ * @brief Calculate F-Number of given frequency.
  * @param[in] hz Frequency.
  * @return F-Number.
  */
@@ -138,7 +138,7 @@ void FmAudioSource::prepareToPlay(int samplesPerBlockExpected,
   {
     const std::lock_guard guard(reservedChangesMutex_);
 
-    // Initialize interruption / YM2608 mode
+    // Initialise interruption / YM2608 mode
     reservedChanges_.emplace_back(0x29u, 0x80u);
   }
 
@@ -688,37 +688,37 @@ void FmAudioSource::reserveUpdatingAllToneParameter() {
       return;
     }
 
-    const auto writeToBindedChannel = [&](std::uint16_t address,
-                                          std::uint8_t data) {
+    const auto writeToBoundChannel = [&](std::uint16_t address,
+                                         std::uint8_t data) {
       const std::lock_guard guard(reservedChangesMutex_);
       reservedChanges_.emplace_back(addressOfChannel(channel, address), data);
     };
 
-    writeToBindedChannel(0xb0u, (toneParameterState_.fb.rawValue() << 3) |
-                                    toneParameterState_.al.rawValue());
+    writeToBoundChannel(0xb0u, (toneParameterState_.fb.rawValue() << 3) |
+                                   toneParameterState_.al.rawValue());
 
     for (std::size_t n = 0; n < audio::kSlotCount; ++n) {
       const auto& op = toneParameterState_.slot[n];
-      const auto writeToBindedOperator = [&](std::uint16_t address,
-                                             std::uint8_t data) {
-        writeToBindedChannel(addressOfOperator(n, address), data);
+      const auto writeToBoundOperator = [&](std::uint16_t address,
+                                            std::uint8_t data) {
+        writeToBoundChannel(addressOfOperator(n, address), data);
       };
 
       const std::uint8_t rawDt = convertDetuneAsRegisterValue(op.dt);
-      writeToBindedOperator(0x30u, (rawDt << 4) | op.ml.rawValue());
-      writeToBindedOperator(0x40u, op.tl.rawValue());
+      writeToBoundOperator(0x30u, (rawDt << 4) | op.ml.rawValue());
+      writeToBoundOperator(0x40u, op.tl.rawValue());
       const std::uint8_t rawAr = op.ssgeg.isEnabled
                                      ? parameter::AttackRateValue::kMaximum
                                      : op.ar.rawValue();
-      writeToBindedOperator(0x50u, (op.ks.rawValue() << 6) | rawAr);
-      writeToBindedOperator(0x60u, op.dr.rawValue());
-      writeToBindedOperator(0x70u, op.sr.rawValue());
-      writeToBindedOperator(0x80u, (op.sl.rawValue() << 4) | op.rr.rawValue());
-      writeToBindedOperator(0x90, util::to_underlying(op.ssgeg.shape));
+      writeToBoundOperator(0x50u, (op.ks.rawValue() << 6) | rawAr);
+      writeToBoundOperator(0x60u, op.dr.rawValue());
+      writeToBoundOperator(0x70u, op.sr.rawValue());
+      writeToBoundOperator(0x80u, (op.sl.rawValue() << 4) | op.rr.rawValue());
+      writeToBoundOperator(0x90, util::to_underlying(op.ssgeg.shape));
     }
 
-    writeToBindedChannel(
-        0xb4u, kPanpotMask | (toneParameterState_.lfo.ams.rawValue() << 4) |
+    writeToBoundChannel(
+        0xb4u, kPanningMask | (toneParameterState_.lfo.ams.rawValue() << 4) |
                    toneParameterState_.lfo.pms.rawValue());
   }
 

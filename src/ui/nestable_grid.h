@@ -73,7 +73,7 @@ class NestableGridItem : public juce::GridItem {
 };
 
 /**
- * @brief Grid whitch is enabled to have inner grids.
+ * @brief Grid which is enabled to have inner grids.
  */
 class NestableGrid {
  public:

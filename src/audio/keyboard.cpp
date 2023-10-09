@@ -154,13 +154,13 @@ std::optional<NoteAssignment> Keyboard::tryNoteOff(const Note& note) {
   }
 
   assignableIdQueue_.push_back(sameNoteItr->assignId);
-  const NoteAssignment noteOffAssignmemt{
+  const NoteAssignment noteOffAssignment{
       .assignId{sameNoteItr->assignId},
       .note{Note::noteOff(sameNoteItr->note.channel,
                           sameNoteItr->note.noteNumber)}};
   noteOnQueue_.erase(sameNoteItr);
 
-  return noteOffAssignmemt;
+  return noteOffAssignment;
 }
 
 std::deque<NoteAssignment> Keyboard::forceAllNoteOff() {
