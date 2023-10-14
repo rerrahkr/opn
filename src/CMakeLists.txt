@@ -4,8 +4,8 @@ target_sources(${PROJECT_TARGET}
         audio/parameter/parameter.cpp
         audio/parameter/parameter_change_queue.cpp
         audio/keyboard.cpp
-        controller.cpp
-        model.cpp
         plugin_editor.cpp
         plugin_processor.cpp
+        reducer.cpp
+        ui/envelope_graph.cpp
         ui/nestable_grid.cpp)

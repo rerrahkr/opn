@@ -10,11 +10,11 @@
 #include <memory>
 #include <mutex>
 
+#include "action.h"
 #include "audio/parameter/parameter.h"
 #include "audio/parameter/parameter_change_queue.h"
-
-class Controller;
-class Model;
+#include "state.h"
+#include "store.h"
 
 namespace audio {
 class FmAudioSource;
@@ -70,14 +70,11 @@ class PluginProcessor : public juce::AudioProcessor {
  private:
   //============================================================================
 
-  /// Model for view state.
-  std::shared_ptr<Model> model_;
+  /// Redux store.
+  std::shared_ptr<PluginStore<PluginState, PluginAction>> store_;
 
   /// Parameters of plugin.
   juce::AudioProcessorValueTreeState parameters_;
-
-  /// Controller.
-  std::shared_ptr<Controller> controller_;
 
   /// Audio source.
   std::unique_ptr<audio::FmAudioSource> audioSource_;

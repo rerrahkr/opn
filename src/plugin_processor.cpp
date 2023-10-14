@@ -10,9 +10,8 @@
 
 #include "audio/fm_audio_source.h"
 #include "audio/pitch_util.h"
-#include "controller.h"
-#include "model.h"
 #include "plugin_editor.h"
+#include "reducer.h"
 
 namespace {
 /// Default pitch bend sensitivity.
@@ -113,9 +112,9 @@ PluginProcessor::PluginProcessor()
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
               ),
-      model_(std::make_shared<Model>()),
+      store_(std::make_shared<PluginStore<PluginState, PluginAction>>(
+          PluginReducer{})),
       parameters_(*this, nullptr, "PARAMETERS", createParameterLayout()),
-      controller_(std::make_shared<Controller>(model_, *this)),
       audioSource_(std::make_unique<audio::FmAudioSource>()) {
 }
 
@@ -278,7 +277,7 @@ bool PluginProcessor::hasEditor() const {
 }
 
 juce::AudioProcessorEditor* PluginProcessor::createEditor() {
-  return new PluginEditor(*this, *controller_, *model_, parameters_);
+  return new PluginEditor(*this, store_, parameters_);
 }
 
 //==============================================================================

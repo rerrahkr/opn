@@ -55,8 +55,16 @@ struct AttachedSlider : public AudioProcessorValueTreeState::Listener {
 
   void parameterChanged(const String& /*parameterID*/,
                         float newValue) override {
-    if (onValueChanged) {
-      onValueChanged(newValue);
+    // TODO: Prefer using juce::ChangerBroadCaster to get juce::MessageManager
+    // for frequent updates.
+    auto* messageManager = juce::MessageManager::getInstanceWithoutCreating();
+    if (messageManager && onValueChanged) {
+      if (messageManager->isThisTheMessageThread()) {
+        onValueChanged(newValue);
+      } else {
+        juce::MessageManager::callAsync(
+            [newValue, f = onValueChanged] { f(newValue); });
+      }
     }
   }
 
@@ -90,8 +98,16 @@ struct AttachedToggleButton
 
   void parameterChanged(const String& /*parameterID*/,
                         float newValue) override {
-    if (onValueChanged) {
-      onValueChanged(newValue);
+    // TODO: Prefer using juce::ChangerBroadCaster to get juce::MessageManager
+    // for frequent updates.
+    auto* messageManager = juce::MessageManager::getInstanceWithoutCreating();
+    if (messageManager && onValueChanged) {
+      if (messageManager->isThisTheMessageThread()) {
+        onValueChanged(newValue);
+      } else {
+        juce::MessageManager::callAsync(
+            [newValue, f = onValueChanged] { f(newValue); });
+      }
     }
   }
 

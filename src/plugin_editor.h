@@ -10,19 +10,23 @@
 #include <memory>
 #include <unordered_map>
 
+#include "action.h"
 #include "audio/parameter/parameter.h"
+#include "state.h"
+#include "store.h"
 #include "ui/attached_component.h"
 
-class Controller;
-struct EditorState;
 class PluginProcessor;
 
+namespace ui {
+class EnvelopeGraph;
+}
+
 //==============================================================================
-class PluginEditor : public juce::AudioProcessorEditor,
-                     public juce::ActionListener {
+class PluginEditor : public juce::AudioProcessorEditor {
  public:
-  PluginEditor(PluginProcessor& processor, Controller& controller,
-               const EditorState& model,
+  PluginEditor(PluginProcessor& processor,
+               std::weak_ptr<PluginStore<PluginState, PluginAction>> store,
                juce::AudioProcessorValueTreeState& parameters);
   ~PluginEditor() override;
 
@@ -30,14 +34,8 @@ class PluginEditor : public juce::AudioProcessorEditor,
   void paint(juce::Graphics& g) override;
   void resized() override;
 
-  void actionListenerCallback(const String& /*message*/) override;
-
  private:
-  /// Controller.
-  Controller& controller_;
-
-  /// Model.
-  const EditorState& model_;
+  std::weak_ptr<PluginStore<PluginState, PluginAction>> store_;
 
   // [Control] -----------------------------------------------------------------
   std::unique_ptr<juce::Label> fbLabel_;
@@ -53,6 +51,10 @@ class PluginEditor : public juce::AudioProcessorEditor,
 
   std::unique_ptr<juce::Label> pitchBendSensitivityLabel_;
   std::unique_ptr<ui::AttachedSlider> pitchBendSensitivitySlider_;
+
+  std::shared_ptr<juce::ToggleButton>
+      frontEnvelopeGraphChoiceButtons_[audio::kSlotCount];
+  std::shared_ptr<ui::EnvelopeGraph> envelopeGraph_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

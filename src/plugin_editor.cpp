@@ -5,17 +5,29 @@
 
 #include "plugin_editor.h"
 
-#include "controller.h"
-#include "model.h"
+#include <utility>
+
 #include "plugin_processor.h"
+#include "ui/envelope_graph.h"
 #include "ui/nestable_grid.h"
-#include "ui/view_message.h"
 
 //==============================================================================
-PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
-                           const EditorState& model,
-                           juce::AudioProcessorValueTreeState& parameters)
-    : AudioProcessorEditor(&processor), controller_(controller), model_(model) {
+PluginEditor::PluginEditor(
+    PluginProcessor& processor,
+    std::weak_ptr<PluginStore<PluginState, PluginAction>> store,
+    juce::AudioProcessorValueTreeState& parameters)
+    : AudioProcessorEditor(&processor), store_(store) {
+  envelopeGraph_ = std::make_shared<ui::EnvelopeGraph>(parameters);
+  addAndMakeVisible(envelopeGraph_.get());
+  if (auto storePtr = store.lock()) {
+    storePtr->subscribe(
+        [weakGraph = std::weak_ptr(envelopeGraph_)](const auto& state) {
+          if (auto graph = weakGraph.lock()) {
+            graph->render(state);
+          }
+        });
+  }
+
   const auto makeLabel = [](const juce::String& text) {
     return std::make_unique<juce::Label>("", text);
   };
@@ -74,9 +86,13 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
               std::forward_as_tuple(
                   juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight,
                   parameters, ap::idAsString(slot, parameterType),
-                  [&processor, slot, conversion](float newValue) {
+                  [&processor, slot, conversion,
+                   weakGraph = std::weak_ptr(envelopeGraph_)](float newValue) {
                     processor.reserveParameterChange(
                         ap::SlotAndValue{slot, conversion(newValue)});
+                    if (auto graph = weakGraph.lock()) {
+                      graph->updateControllerPosition();
+                    }
                   }));
           addAndMakeVisible(iter->second.slider);
         };
@@ -107,7 +123,26 @@ PluginEditor::PluginEditor(PluginProcessor& processor, Controller& controller,
     });
   }
 
-  setSize(400, 300);
+  for (std::size_t slot = 0; slot < audio::kSlotCount; ++slot) {
+    constexpr int radioGroupId{1};
+    auto button =
+        std::make_shared<juce::ToggleButton>("Op-" + juce::String(slot + 1u));
+    button->setRadioGroupId(radioGroupId);
+    button->onClick = [slot, store, weakButton = std::weak_ptr(button)] {
+      if (auto button = weakButton.lock(); button && button->getToggleState()) {
+        if (auto storePtr = store.lock()) {
+          storePtr->dispatch(PluginAction{
+              .type{PluginAction::Type::EnvelopeGraphFrontRadioButtonChanged},
+              .payload{slot}});
+        }
+      }
+    };
+    addAndMakeVisible(button.get());
+    frontEnvelopeGraphChoiceButtons_[slot] = std::move(button);
+  }
+  frontEnvelopeGraphChoiceButtons_[0]->triggerClick();
+
+  setSize(1000, 500);
   setResizable(true, false);
   resized();
 }
@@ -147,6 +182,13 @@ void PluginEditor::resized() {
     button->button.setBounds(0, y, kToggleButtonWidth, kRowHeight);
     y += kRowHeight;
   }
-}
 
-void PluginEditor::actionListenerCallback(const String& /*message*/) {}
+  for (std::size_t slot = 0; slot < audio::kSlotCount; ++slot) {
+    constexpr int width{100};
+    frontEnvelopeGraphChoiceButtons_[slot]->setBounds(
+        400 + width * static_cast<int>(slot), 0, width, kRowHeight);
+  }
+
+  envelopeGraph_->setBounds(400, kRowHeight, getRight() - 400,
+                            getBottom() - kRowHeight);
+}

@@ -16,7 +16,8 @@
         "ymfm",
         "nrpn",
         "adpcm",
-        "ssgeg"
+        "ssgeg",
+        "redux"
     ],
     "cSpell.words": [
         "resampler",
