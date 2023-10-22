@@ -9,108 +9,49 @@
 
 namespace ui {
 /**
- * @brief Pair of slider and its attachment.
+ * @brief The pair of label and slider with attachment for plugin parameter.
  */
-struct AttachedSlider : public AudioProcessorValueTreeState::Listener {
-  juce::Slider slider;
+struct LabeledSliderWithAttachment {
+  std::unique_ptr<juce::Label> label;
+  std::unique_ptr<juce::Slider> slider;
   juce::AudioProcessorValueTreeState::SliderAttachment attachment;
-  std::function<void(float)> onValueChanged;
 
   /**
    * @brief Constructor.
-   *
-   * @param[in] parameters Plugin parameters.
-   * @param[in] parameterId Parameter identifier.
-   * @param[in] onValueChanged Function called when the parameter value is
-   * changed.
+   * @param[in] parameters Value tre of plugin parameters.
+   * @param[in] parameterId ID of attached parameter.
+   * @param[in] labelText Text displayed on label.
+   * @param[in] args Constructor arguments for slider.
    */
-  AttachedSlider(juce::AudioProcessorValueTreeState& parameters,
-                 const juce::String& parameterId,
-                 const std::function<void(float)> onValueChanged)
-      : attachment(parameters, parameterId, slider),
-        onValueChanged(onValueChanged) {
-    parameters.addParameterListener(parameterId, this);
-  }
-
-  /**
-   * @brief Constructor with slider styles.
-   *
-   * @param[in] style Slider style.
-   * @param[in] textBoxPosition Position of text box in slider.
-   * @param[in] parameters Plugin parameters.
-   * @param[in] parameterId Parameter identifier.
-   * @param[in] onValueChanged Function called when the parameter value is
-   * changed.
-   */
-  AttachedSlider(juce::Slider::SliderStyle style,
-                 juce::Slider::TextEntryBoxPosition textBoxPosition,
-                 juce::AudioProcessorValueTreeState& parameters,
-                 const juce::String& parameterId,
-                 const std::function<void(float)> onValueChanged)
-      : slider(style, textBoxPosition),
-        attachment(parameters, parameterId, slider),
-        onValueChanged(onValueChanged) {
-    parameters.addParameterListener(parameterId, this);
-  }
-
-  void parameterChanged(const String& /*parameterID*/,
-                        float newValue) override {
-    // TODO: Prefer using juce::ChangerBroadCaster to get juce::MessageManager
-    // for frequent updates.
-    auto* messageManager = juce::MessageManager::getInstanceWithoutCreating();
-    if (messageManager && onValueChanged) {
-      if (messageManager->isThisTheMessageThread()) {
-        onValueChanged(newValue);
-      } else {
-        juce::MessageManager::callAsync(
-            [newValue, f = onValueChanged] { f(newValue); });
-      }
-    }
-  }
-
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AttachedSlider);
+  template <class... Args>
+  LabeledSliderWithAttachment(juce::AudioProcessorValueTreeState& parameters,
+                              const juce::String& parameterId,
+                              const juce::String& labelText, Args&&... args)
+      : label(std::make_unique<juce::Label>("", labelText)),
+        slider(std::make_unique<juce::Slider>(std::forward<Args>(args)...)),
+        attachment(parameters, parameterId, *slider){};
 };
 
 /**
- * @brief Pair of toggle button and its attachment.
+ * @brief The pair of label and toggle button with attachment for plugin
+ * parameter.
  */
-struct AttachedToggleButton
-    : public juce::AudioProcessorValueTreeState::Listener {
-  juce::ToggleButton button;
+struct LabeledToggleButtonWithAttachment {
+  std::unique_ptr<juce::Label> label;
+  std::unique_ptr<juce::ToggleButton> toggleButton;
   juce::AudioProcessorValueTreeState::ButtonAttachment attachment;
-  std::function<void(float)> onValueChanged;
 
   /**
    * @brief Constructor.
-   *
-   * @param[in] parameters Plugin parameters.
-   * @param[in] parameterId Parameter identifier.
-   * @param[in] onValueChanged Function called when the parameter value is
-   * changed.
+   * @param[in] parameters Value tre of plugin parameters.
+   * @param[in] parameterId ID of attached parameter.
+   * @param[in] labelText Text displayed on label.
    */
-  AttachedToggleButton(juce::AudioProcessorValueTreeState& parameters,
-                       const juce::String& parameterId,
-                       const std::function<void(float)> onValueChanged)
-      : attachment(parameters, parameterId, button),
-        onValueChanged(onValueChanged) {
-    parameters.addParameterListener(parameterId, this);
-  }
-
-  void parameterChanged(const String& /*parameterID*/,
-                        float newValue) override {
-    // TODO: Prefer using juce::ChangerBroadCaster to get juce::MessageManager
-    // for frequent updates.
-    auto* messageManager = juce::MessageManager::getInstanceWithoutCreating();
-    if (messageManager && onValueChanged) {
-      if (messageManager->isThisTheMessageThread()) {
-        onValueChanged(newValue);
-      } else {
-        juce::MessageManager::callAsync(
-            [newValue, f = onValueChanged] { f(newValue); });
-      }
-    }
-  }
-
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AttachedToggleButton);
+  LabeledToggleButtonWithAttachment(
+      juce::AudioProcessorValueTreeState& parameters,
+      const juce::String& parameterId, const juce::String& labelText)
+      : label(std::make_unique<juce::Label>("", labelText)),
+        toggleButton(std::make_unique<juce::ToggleButton>()),
+        attachment(parameters, parameterId, *toggleButton){};
 };
 }  // namespace ui

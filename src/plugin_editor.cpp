@@ -5,10 +5,15 @@
 
 #include "plugin_editor.h"
 
+#include <limits>
+#include <type_traits>
 #include <utility>
 
+#include "apvts_attachment.h"
 #include "plugin_processor.h"
 #include "ui/envelope_graph.h"
+#include "ui/fm_operator_parameters_tab_content.h"
+#include "ui/fm_operator_parameters_tabbed_component.h"
 #include "ui/nestable_grid.h"
 
 //==============================================================================
@@ -28,121 +33,143 @@ PluginEditor::PluginEditor(
         });
   }
 
-  const auto makeLabel = [](const juce::String& text) {
-    return std::make_unique<juce::Label>("", text);
-  };
-
   namespace ap = audio::parameter;
 
+  const auto makeLabeledSlider = [&](const juce::String& parameterId,
+                                     const juce::String& labelText,
+                                     auto&& callback, auto&&... sliderArgs) {
+    auto&& labeledSlider = std::make_unique<ui::LabeledSliderWithAttachment>(
+        parameters, parameterId, labelText,
+        std::forward<decltype(sliderArgs)>(sliderArgs)...);
+    addAndMakeVisible(labeledSlider->label.get());
+    addAndMakeVisible(labeledSlider->slider.get());
+    apvtsAttachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters, parameterId, std::forward<decltype(callback)>(callback)));
+    return labeledSlider;
+  };
+
   // Pitch bend sensitivity.
-  pitchBendSensitivityLabel_ = makeLabel("Pitch bend sensitivity");
-  addAndMakeVisible(pitchBendSensitivityLabel_.get());
-  pitchBendSensitivitySlider_ = std::make_unique<ui::AttachedSlider>(
-      juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft, parameters,
+  pitchBendSensitivityPair_ = makeLabeledSlider(
       ap::idAsString(ap::PluginParameter::PitchBendSensitivity),
+      "Pitch Bend Sensitivity",
       [&processor](float newValue) {
         processor.reserveParameterChange(
             ap::parameterCast<ap::PitchBendSensitivityValue>(newValue));
-      });
-  addAndMakeVisible(pitchBendSensitivitySlider_->slider);
-
-  // Feedback.
-  fbLabel_ = makeLabel("Feedback");
-  addAndMakeVisible(fbLabel_.get());
-  fbSlider_ = std::make_unique<ui::AttachedSlider>(
-      juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight, parameters,
-      ap::idAsString(ap::FmToneParameter::Fb), [&processor](float newValue) {
-        processor.reserveParameterChange(
-            ap::parameterCast<ap::FeedbackValue>(newValue));
-      });
-  addAndMakeVisible(fbSlider_->slider);
+      },
+      juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
 
   // Algorithm.
-  alSlider_ = std::make_unique<ui::AttachedSlider>(
-      juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft, parameters,
-      ap::idAsString(ap::FmToneParameter::Al), [&processor](float newValue) {
+  alPair_ = makeLabeledSlider(
+      ap::idAsString(ap::FmToneParameter::Al), "Algorithm",
+      [&processor](float newValue) {
         processor.reserveParameterChange(
             ap::parameterCast<ap::AlgorithmValue>(newValue));
-      });
-  addAndMakeVisible(alSlider_->slider);
+      },
+      juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
 
-  // Operator parameters.
-  for (std::size_t i = 0; i < audio::kSlotCount; ++i) {
-    auto enabledButton = std::make_unique<ui::AttachedToggleButton>(
-        parameters, ap::idAsString(i, ap::FmOperatorParameter::OperatorEnabled),
-        [&processor, i](float newValue) {
-          processor.reserveParameterChange(ap::SlotAndValue(
-              i, ap::parameterCast<ap::OperatorEnabledValue>(newValue)));
+  // Feedback.
+  fbPair_ = makeLabeledSlider(
+      ap::idAsString(ap::FmToneParameter::Fb), "Feedback",
+      [&processor](float newValue) {
+        processor.reserveParameterChange(
+            ap::parameterCast<ap::FeedbackValue>(newValue));
+      },
+      juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
+
+  // Attach callbacks for operator parameters.
+  for (std::size_t slot = 0; slot < audio::kSlotCount; ++slot) {
+    // Callbacks for audio processor.
+    const auto attachCallbackForProcessor =
+        [&](ap::FmOperatorParameter parameterType, auto&& conversion) {
+          apvtsAttachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+              parameters, ap::idAsString(slot, parameterType),
+              [&processor, slot, conversion](float newValue) {
+                processor.reserveParameterChange(
+                    ap::SlotAndValue{slot, conversion(newValue)});
+              }));
+        };
+
+    attachCallbackForProcessor(
+        ap::FmOperatorParameter::OperatorEnabled, [](float newValue) {
+          return ap::parameterCast<ap::OperatorEnabledValue>(newValue);
         });
-    addAndMakeVisible(enabledButton->button);
-    operatorEnabledButtons_[i] = std::move(enabledButton);
+    attachCallbackForProcessor(ap::FmOperatorParameter::Ar, [](float newValue) {
+      return ap::parameterCast<ap::AttackRateValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Dr, [](float newValue) {
+      return ap::parameterCast<ap::DecayRateValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Sr, [](float newValue) {
+      return ap::parameterCast<ap::SustainRateValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Rr, [](float newValue) {
+      return ap::parameterCast<ap::ReleaseRateValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Sl, [](float newValue) {
+      return ap::parameterCast<ap::SustainLevelValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Tl, [](float newValue) {
+      return ap::parameterCast<ap::AttackRateValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Ks, [](float newValue) {
+      return ap::parameterCast<ap::KeyScaleValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Ml, [](float newValue) {
+      return ap::parameterCast<ap::MultipleValue>(newValue);
+    });
+    attachCallbackForProcessor(ap::FmOperatorParameter::Dt, [](float newValue) {
+      return ap::parameterCast<ap::DetuneValue>(newValue);
+    });
 
-    // Slider initialization lambda for operator parameters.
-    static const auto initialiseSlider =
-        [&](std::size_t slot, ap::FmOperatorParameter parameterType,
-            auto conversion) {
-          [[maybe_unused]] auto [iter, _] = operatorSliders_[slot].emplace(
-              std::piecewise_construct, std::forward_as_tuple(parameterType),
-              std::forward_as_tuple(
-                  juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight,
+    // Callback for UI.
+    const auto attachCallbackForUi =
+        [&](ap::FmOperatorParameter parameterType) {
+          apvtsUiAttachments_.emplace_back(
+              std::make_unique<ApvtsAttachmentForUi>(
                   parameters, ap::idAsString(slot, parameterType),
-                  [&processor, slot, conversion,
-                   weakGraph = std::weak_ptr(envelopeGraph_)](float newValue) {
-                    processor.reserveParameterChange(
-                        ap::SlotAndValue{slot, conversion(newValue)});
+                  [weakGraph =
+                       std::weak_ptr(envelopeGraph_)](float /*newValue*/) {
                     if (auto graph = weakGraph.lock()) {
                       graph->updateControllerPosition();
                     }
                   }));
-          addAndMakeVisible(iter->second.slider);
         };
 
-    initialiseSlider(i, ap::FmOperatorParameter::Ar, [](float newValue) {
-      return ap::parameterCast<ap::AttackRateValue>(newValue);
-    });
-    initialiseSlider(i, ap::FmOperatorParameter::Dr, [](float newValue) {
-      return ap::parameterCast<ap::DecayRateValue>(newValue);
-    });
-    initialiseSlider(i, ap::FmOperatorParameter::Sr, [](float newValue) {
-      return ap::parameterCast<ap::SustainRateValue>(newValue);
-    });
-    initialiseSlider(i, ap::FmOperatorParameter::Rr, [](float newValue) {
-      return ap::parameterCast<ap::ReleaseRateValue>(newValue);
-    });
-    initialiseSlider(i, ap::FmOperatorParameter::Sl, [](float newValue) {
-      return ap::parameterCast<ap::SustainLevelValue>(newValue);
-    });
-    initialiseSlider(i, ap::FmOperatorParameter::Tl, [](float newValue) {
-      return ap::parameterCast<ap::AttackRateValue>(newValue);
-    });
-    initialiseSlider(i, ap::FmOperatorParameter::Ks, [](float newValue) {
-      return ap::parameterCast<ap::KeyScaleValue>(newValue);
-    });
-    initialiseSlider(i, ap::FmOperatorParameter::Dt, [](float newValue) {
-      return ap::parameterCast<ap::DetuneValue>(newValue);
-    });
+    attachCallbackForUi(ap::FmOperatorParameter::OperatorEnabled);
+    attachCallbackForUi(ap::FmOperatorParameter::Ar);
+    attachCallbackForUi(ap::FmOperatorParameter::Dr);
+    attachCallbackForUi(ap::FmOperatorParameter::Sr);
+    attachCallbackForUi(ap::FmOperatorParameter::Rr);
+    attachCallbackForUi(ap::FmOperatorParameter::Sl);
+    attachCallbackForUi(ap::FmOperatorParameter::Tl);
   }
 
+  fmOperatorParamsTab_ =
+      std::make_unique<ui::FmOperatorParametersTabbedComponent>(
+          juce::TabbedButtonBar::TabsAtTop, [store](int tabIndex) {
+            if (auto storePtr = store.lock()) {
+              storePtr->dispatch(PluginAction{
+                  .type{PluginAction::Type::CurrentEditingOperatorChanged},
+                  .payload{static_cast<std::size_t>(tabIndex)}});
+            }
+          });
   for (std::size_t slot = 0; slot < audio::kSlotCount; ++slot) {
-    constexpr int radioGroupId{1};
-    auto button =
-        std::make_shared<juce::ToggleButton>("Op-" + juce::String(slot + 1u));
-    button->setRadioGroupId(radioGroupId);
-    button->onClick = [slot, store, weakButton = std::weak_ptr(button)] {
-      if (auto button = weakButton.lock(); button && button->getToggleState()) {
-        if (auto storePtr = store.lock()) {
-          storePtr->dispatch(PluginAction{
-              .type{PluginAction::Type::EnvelopeGraphFrontRadioButtonChanged},
-              .payload{slot}});
-        }
-      }
-    };
-    addAndMakeVisible(button.get());
-    frontEnvelopeGraphChoiceButtons_[slot] = std::move(button);
+    constexpr auto kLightness{.3f}, kAlpha{1.f};
+    static const juce::Colour backColours[]{
+        juce::Colour::fromHSL(.42f, .30f, kLightness, kAlpha),
+        juce::Colour::fromHSL(.83f, .30f, kLightness, kAlpha),
+        juce::Colour::fromHSL(.60f, .30f, kLightness, kAlpha),
+        juce::Colour::fromHSL(.13f, .30f, kLightness, kAlpha)};
+    auto&& content =
+        std::make_unique<ui::FmOperatorParametersTabContent>(slot, parameters);
+    fmOperatorParamsTab_->addTab("Op." + juce::String(slot + 1u),
+                                 backColours[slot], content.release(), true);
   }
-  frontEnvelopeGraphChoiceButtons_[0]->triggerClick();
+  addAndMakeVisible(fmOperatorParamsTab_.get());
 
-  setSize(1000, 500);
+  setSize(800, 400);
+  setResizeLimits(600, 400, std::numeric_limits<int>::max(),
+                  std::numeric_limits<int>::max());
   setResizable(true, false);
   resized();
 }
@@ -156,39 +183,48 @@ void PluginEditor::paint(juce::Graphics& g) {
 }
 
 void PluginEditor::resized() {
-  constexpr int kRowHeight{20}, kSliderWidth{120}, kToggleButtonWidth{20};
-  int y{};
+  constexpr int kContentAreaPadding{20};
+  constexpr int kLeftAreaWidth{300};
+  constexpr int kRowHeight{20};
 
-  pitchBendSensitivityLabel_->setBounds(0, y, 200, kRowHeight);
-  pitchBendSensitivitySlider_->slider.setBounds(200, y, kSliderWidth,
-                                                kRowHeight);
-  y += kRowHeight;
+  auto area = getLocalBounds().reduced(kContentAreaPadding);
 
-  fbLabel_->setBounds(0, y, 100, kRowHeight);
-  fbSlider_->slider.setBounds(100, y, kSliderWidth, kRowHeight);
-  y += kRowHeight;
+  juce::Rectangle<int> leftArea, rightArea;
+  ui::NestableGrid contentGrid;
+  contentGrid.setTemplateColumns({juce::Grid::Px{kLeftAreaWidth}, 1_fr});
+  contentGrid.setTemplateRows({1_fr});
+  contentGrid.setItems(
+      {ui::NestableGridItem{leftArea}, ui::NestableGridItem{rightArea}});
+  contentGrid.setGap(juce::Grid::Px{kContentAreaPadding});
+  contentGrid.performLayout(area);
 
-  alSlider_->slider.setBounds(0, y, kSliderWidth, kRowHeight);
-  y += kRowHeight;
-
-  for (auto& sliderMap : operatorSliders_) {
-    for ([[maybe_unused]] auto& [_, slider] : sliderMap) {
-      slider.slider.setBounds(0, y, kSliderWidth + 100, kRowHeight);
-      y += kRowHeight;
-    }
+  // Left area.
+  {
+    const auto pluginParamsArea = leftArea.removeFromTop(kRowHeight);
+    ui::NestableGrid pluginParamsGrid;
+    pluginParamsGrid.setTemplateColumns({1_fr, 1_fr});
+    pluginParamsGrid.setTemplateRows({1_fr});
+    pluginParamsGrid.setItems({pitchBendSensitivityPair_->label.get(),
+                               pitchBendSensitivityPair_->slider.get()});
+    pluginParamsGrid.performLayout(pluginParamsArea);
   }
 
-  for (auto& button : operatorEnabledButtons_) {
-    button->button.setBounds(0, y, kToggleButtonWidth, kRowHeight);
-    y += kRowHeight;
+  {
+    const auto toneParamsArea = leftArea.removeFromTop(kRowHeight * 2);
+    ui::NestableGrid toneParamsGrid;
+    toneParamsGrid.setTemplateColumns({1_fr, 1_fr});
+    toneParamsGrid.setTemplateRows({1_fr, 1_fr});
+    toneParamsGrid.setItems({alPair_->label.get(), alPair_->slider.get(),
+                             fbPair_->label.get(), fbPair_->slider.get()});
+    toneParamsGrid.performLayout(toneParamsArea);
   }
 
-  for (std::size_t slot = 0; slot < audio::kSlotCount; ++slot) {
-    constexpr int width{100};
-    frontEnvelopeGraphChoiceButtons_[slot]->setBounds(
-        400 + width * static_cast<int>(slot), 0, width, kRowHeight);
+  {
+    const auto fmOperatorParamsTabArea =
+        leftArea.removeFromTop(kRowHeight * 11);
+    fmOperatorParamsTab_->setBounds(fmOperatorParamsTabArea);
   }
 
-  envelopeGraph_->setBounds(400, kRowHeight, getRight() - 400,
-                            getBottom() - kRowHeight);
+  // Right area.
+  envelopeGraph_->setBounds(rightArea);
 }

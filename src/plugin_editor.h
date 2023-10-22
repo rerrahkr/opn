@@ -9,8 +9,11 @@
 
 #include <memory>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "action.h"
+#include "apvts_attachment.h"
 #include "audio/parameter/parameter.h"
 #include "state.h"
 #include "store.h"
@@ -20,11 +23,18 @@ class PluginProcessor;
 
 namespace ui {
 class EnvelopeGraph;
-}
+class FmOperatorParametersTabbedComponent;
+}  // namespace ui
 
 //==============================================================================
 class PluginEditor : public juce::AudioProcessorEditor {
  public:
+  /**
+   * @brief Constructor.
+   * @param[in] processor Audio plugin processor.
+   * @param[in] store Store.
+   * @param[in] parameters APVTS.
+   */
   PluginEditor(PluginProcessor& processor,
                std::weak_ptr<PluginStore<PluginState, PluginAction>> store,
                juce::AudioProcessorValueTreeState& parameters);
@@ -35,25 +45,22 @@ class PluginEditor : public juce::AudioProcessorEditor {
   void resized() override;
 
  private:
+  // Store.
   std::weak_ptr<PluginStore<PluginState, PluginAction>> store_;
 
   // [Control] -----------------------------------------------------------------
-  std::unique_ptr<juce::Label> fbLabel_;
-  std::unique_ptr<ui::AttachedSlider> fbSlider_;
+  // Label and slider pairs.
+  std::unique_ptr<ui::LabeledSliderWithAttachment> pitchBendSensitivityPair_;
+  std::unique_ptr<ui::LabeledSliderWithAttachment> alPair_, fbPair_;
 
-  std::unique_ptr<ui::AttachedSlider> alSlider_;
+  // Attachments for APVTS.
+  std::vector<std::unique_ptr<ApvtsAttachment>> apvtsAttachments_;
+  std::vector<std::unique_ptr<ApvtsAttachmentForUi>> apvtsUiAttachments_;
 
-  std::unordered_map<audio::parameter::FmOperatorParameter, ui::AttachedSlider>
-      operatorSliders_[audio::kSlotCount];
+  // Tabbed component of FM operator parameters.
+  std::unique_ptr<ui::FmOperatorParametersTabbedComponent> fmOperatorParamsTab_;
 
-  std::unique_ptr<ui::AttachedToggleButton>
-      operatorEnabledButtons_[audio::kSlotCount];
-
-  std::unique_ptr<juce::Label> pitchBendSensitivityLabel_;
-  std::unique_ptr<ui::AttachedSlider> pitchBendSensitivitySlider_;
-
-  std::shared_ptr<juce::ToggleButton>
-      frontEnvelopeGraphChoiceButtons_[audio::kSlotCount];
+  // Envelope graph/
   std::shared_ptr<ui::EnvelopeGraph> envelopeGraph_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)

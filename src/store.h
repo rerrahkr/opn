@@ -30,7 +30,9 @@ class PluginStore {
 
   /**
    * @brief Subscribe state changes.
-   * @param[in] callback Function called when the state is changed.
+   * @param[in] callback Function called when the state is changed. Note that
+   * there is no guarantee that this callback will be invoked in the message
+   * thread.
    */
   void subscribe(std::function<void(const State&)> callback) {
     subscribers_.emplace_back(std::move(callback));

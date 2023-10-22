@@ -617,6 +617,11 @@ void EnvelopeGraph::setFrontEnvelopeOperator(std::size_t slot) {
     return;
   }
 
+  if (linkStrokeThicknessList_[slot] == stroke_thickness::kFrontLink) {
+    // Not need to update state.
+    return;
+  }
+
   frontArId_ = ap::idAsString(slot, ap::FmOperatorParameter::Ar);
   frontTlId_ = ap::idAsString(slot, ap::FmOperatorParameter::Tl);
   frontDrId_ = ap::idAsString(slot, ap::FmOperatorParameter::Dr);

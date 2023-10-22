@@ -14,7 +14,7 @@ PluginState PluginReducer::operator()(
     case InvalidAction:
       break;
 
-    case EnvelopeGraphFrontRadioButtonChanged:
+    case CurrentEditingOperatorChanged:
       if (action.payload.type() ==
           typeid(decltype(newState.envelopeGraphFrontSlot))) {
         newState.envelopeGraphFrontSlot =

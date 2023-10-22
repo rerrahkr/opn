@@ -13,7 +13,7 @@ struct PluginAction {
   enum class Type {
     InvalidAction,
 
-    EnvelopeGraphFrontRadioButtonChanged,
+    CurrentEditingOperatorChanged,
   };
 
   /// Type of action.

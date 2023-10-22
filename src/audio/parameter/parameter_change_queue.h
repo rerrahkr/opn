@@ -12,6 +12,7 @@
 
 namespace audio {
 namespace parameter {
+// TODO: Lock-free
 /**
  * @brief FIFO queue of parameters whose element type is unique.
  */
