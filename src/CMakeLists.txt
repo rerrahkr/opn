@@ -7,6 +7,7 @@ target_sources(${PROJECT_TARGET}
         plugin_editor.cpp
         plugin_processor.cpp
         reducer.cpp
+        ui/animated_toggle_button.cpp
         ui/envelope_graph.cpp
         ui/fm_operator_parameters_tab_content.cpp
         ui/fm_operator_parameters_tabbed_component.cpp

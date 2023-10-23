@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include "animated_toggle_button.h"
+
 namespace ui {
 /**
  * @brief The pair of label and slider with attachment for plugin parameter.
@@ -38,7 +40,7 @@ struct LabeledSliderWithAttachment {
  */
 struct LabeledToggleButtonWithAttachment {
   std::unique_ptr<juce::Label> label;
-  std::unique_ptr<juce::ToggleButton> toggleButton;
+  std::unique_ptr<AnimatedToggleButton> toggleButton;
   juce::AudioProcessorValueTreeState::ButtonAttachment attachment;
 
   /**
@@ -51,7 +53,7 @@ struct LabeledToggleButtonWithAttachment {
       juce::AudioProcessorValueTreeState& parameters,
       const juce::String& parameterId, const juce::String& labelText)
       : label(std::make_unique<juce::Label>("", labelText)),
-        toggleButton(std::make_unique<juce::ToggleButton>()),
+        toggleButton(std::make_unique<AnimatedToggleButton>()),
         attachment(parameters, parameterId, *toggleButton){};
 };
 }  // namespace ui
