@@ -9,8 +9,10 @@
 
 #include <memory>
 #include <mutex>
+#include <vector>
 
 #include "action.h"
+#include "apvts_attachment.h"
 #include "audio/parameter/parameter.h"
 #include "audio/parameter/parameter_change_queue.h"
 #include "state.h"
@@ -75,6 +77,9 @@ class PluginProcessor : public juce::AudioProcessor {
 
   /// Parameters of plugin.
   juce::AudioProcessorValueTreeState parameters_;
+
+  /// Attachments for APVTS.
+  std::vector<std::unique_ptr<ApvtsAttachment>> attachments_;
 
   /// Audio source.
   std::unique_ptr<audio::FmAudioSource> audioSource_;

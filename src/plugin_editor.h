@@ -54,7 +54,6 @@ class PluginEditor : public juce::AudioProcessorEditor {
   std::unique_ptr<ui::LabeledSliderWithAttachment> alPair_, fbPair_;
 
   // Attachments for APVTS.
-  std::vector<std::unique_ptr<ApvtsAttachment>> apvtsAttachments_;
   std::vector<std::unique_ptr<ApvtsAttachmentForUi>> apvtsUiAttachments_;
 
   // Tabbed component of FM operator parameters.

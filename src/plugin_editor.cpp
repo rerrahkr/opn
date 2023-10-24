@@ -37,90 +37,33 @@ PluginEditor::PluginEditor(
 
   const auto makeLabeledSlider = [&](const juce::String& parameterId,
                                      const juce::String& labelText,
-                                     auto&& callback, auto&&... sliderArgs) {
+                                     auto&&... sliderArgs) {
     auto&& labeledSlider = std::make_unique<ui::LabeledSliderWithAttachment>(
         parameters, parameterId, labelText,
         std::forward<decltype(sliderArgs)>(sliderArgs)...);
     addAndMakeVisible(labeledSlider->label.get());
     addAndMakeVisible(labeledSlider->slider.get());
-    apvtsAttachments_.emplace_back(std::make_unique<ApvtsAttachment>(
-        parameters, parameterId, std::forward<decltype(callback)>(callback)));
     return labeledSlider;
   };
 
   // Pitch bend sensitivity.
   pitchBendSensitivityPair_ = makeLabeledSlider(
       ap::idAsString(ap::PluginParameter::PitchBendSensitivity),
-      "Pitch Bend Sensitivity",
-      [&processor](float newValue) {
-        processor.reserveParameterChange(
-            ap::parameterCast<ap::PitchBendSensitivityValue>(newValue));
-      },
-      juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
+      "Pitch Bend Sensitivity", juce::Slider::IncDecButtons,
+      juce::Slider::TextBoxLeft);
 
   // Algorithm.
-  alPair_ = makeLabeledSlider(
-      ap::idAsString(ap::FmToneParameter::Al), "Algorithm",
-      [&processor](float newValue) {
-        processor.reserveParameterChange(
-            ap::parameterCast<ap::AlgorithmValue>(newValue));
-      },
-      juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
+  alPair_ =
+      makeLabeledSlider(ap::idAsString(ap::FmToneParameter::Al), "Algorithm",
+                        juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
 
   // Feedback.
-  fbPair_ = makeLabeledSlider(
-      ap::idAsString(ap::FmToneParameter::Fb), "Feedback",
-      [&processor](float newValue) {
-        processor.reserveParameterChange(
-            ap::parameterCast<ap::FeedbackValue>(newValue));
-      },
-      juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
+  fbPair_ = makeLabeledSlider(ap::idAsString(ap::FmToneParameter::Fb),
+                              "Feedback", juce::Slider::LinearHorizontal,
+                              juce::Slider::TextBoxRight);
 
   // Attach callbacks for operator parameters.
   for (std::size_t slot = 0; slot < audio::kSlotCount; ++slot) {
-    // Callbacks for audio processor.
-    const auto attachCallbackForProcessor =
-        [&](ap::FmOperatorParameter parameterType, auto&& conversion) {
-          apvtsAttachments_.emplace_back(std::make_unique<ApvtsAttachment>(
-              parameters, ap::idAsString(slot, parameterType),
-              [&processor, slot, conversion](float newValue) {
-                processor.reserveParameterChange(
-                    ap::SlotAndValue{slot, conversion(newValue)});
-              }));
-        };
-
-    attachCallbackForProcessor(
-        ap::FmOperatorParameter::OperatorEnabled, [](float newValue) {
-          return ap::parameterCast<ap::OperatorEnabledValue>(newValue);
-        });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Ar, [](float newValue) {
-      return ap::parameterCast<ap::AttackRateValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Dr, [](float newValue) {
-      return ap::parameterCast<ap::DecayRateValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Sr, [](float newValue) {
-      return ap::parameterCast<ap::SustainRateValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Rr, [](float newValue) {
-      return ap::parameterCast<ap::ReleaseRateValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Sl, [](float newValue) {
-      return ap::parameterCast<ap::SustainLevelValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Tl, [](float newValue) {
-      return ap::parameterCast<ap::AttackRateValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Ks, [](float newValue) {
-      return ap::parameterCast<ap::KeyScaleValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Ml, [](float newValue) {
-      return ap::parameterCast<ap::MultipleValue>(newValue);
-    });
-    attachCallbackForProcessor(ap::FmOperatorParameter::Dt, [](float newValue) {
-      return ap::parameterCast<ap::DetuneValue>(newValue);
-    });
-
     // Callback for UI.
     const auto attachCallbackForUi =
         [&](ap::FmOperatorParameter parameterType) {

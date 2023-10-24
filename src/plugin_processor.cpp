@@ -116,6 +116,100 @@ PluginProcessor::PluginProcessor()
           PluginReducer{})),
       parameters_(*this, nullptr, "PARAMETERS", createParameterLayout()),
       audioSource_(std::make_unique<audio::FmAudioSource>()) {
+  namespace ap = audio::parameter;
+
+  // Set attachments to parameters.
+  attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+      parameters_, ap::idAsString(ap::PluginParameter::PitchBendSensitivity),
+      [&](float newValue) {
+        reserveParameterChange(
+            ap::parameterCast<ap::PitchBendSensitivityValue>(newValue));
+      }));
+
+  attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+      parameters_, ap::idAsString(ap::FmToneParameter::Al),
+      [&](float newValue) {
+        reserveParameterChange(ap::parameterCast<ap::AlgorithmValue>(newValue));
+      }));
+
+  attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+      parameters_, ap::idAsString(ap::FmToneParameter::Fb),
+      [&](float newValue) {
+        reserveParameterChange(ap::parameterCast<ap::FeedbackValue>(newValue));
+      }));
+
+  for (std::size_t slot = 0u; slot < audio::kSlotCount; ++slot) {
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_,
+        ap::idAsString(slot, ap::FmOperatorParameter::OperatorEnabled),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::OperatorEnabledValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Ar),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::AttackRateValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Dr),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::DecayRateValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Sr),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::SustainRateValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Rr),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::ReleaseRateValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Sl),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::SustainLevelValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Tl),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::TotalLevelValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Ks),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::KeyScaleValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Ml),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::MultipleValue>(newValue)});
+        }));
+
+    attachments_.emplace_back(std::make_unique<ApvtsAttachment>(
+        parameters_, ap::idAsString(slot, ap::FmOperatorParameter::Dt),
+        [&, slot](float newValue) {
+          reserveParameterChange(ap::SlotAndValue{
+              slot, ap::parameterCast<ap::DetuneValue>(newValue)});
+        }));
+  }
 }
 
 PluginProcessor::~PluginProcessor() {}
