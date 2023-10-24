@@ -36,7 +36,8 @@ class PluginProcessor : public juce::AudioProcessor {
 
   void processBlock(juce::AudioBuffer<float>& buffer,
                     juce::MidiBuffer& midiMessages) override;
-  using AudioProcessor::processBlock;
+  void processBlockBypassed(juce::AudioBuffer<float>& buffer,
+                            juce::MidiBuffer& midiMessages) override;
 
   //============================================================================
   juce::AudioProcessorEditor* createEditor() override;
@@ -91,6 +92,14 @@ class PluginProcessor : public juce::AudioProcessor {
 
   /// Queue storing notifications of parameter change.
   audio::parameter::ParameterChangeQueue parameterChangeQueue_;
+
+  /**
+   * @brief Fill generated samples to given buffer.
+   * @param[in] buffer Zero-padded buffer which is stored samples.
+   * @param[in] midiMessages Received MIDI messages.
+   */
+  void fillBuffer(juce::AudioBuffer<float>& buffer,
+                  juce::MidiBuffer& midiMessages);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

@@ -307,9 +307,32 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                    juce::MidiBuffer& midiMessages) {
+  buffer.clear(0, buffer.getNumSamples());
+
+  fillBuffer(buffer, midiMessages);
+}
+
+void PluginProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer,
+                                           juce::MidiBuffer& midiMessages) {
+  buffer.clear(0, buffer.getNumSamples());
+
+  auto dummyBuffer = [&] {
+    juce::AudioBuffer<float> dummy;
+    dummy.makeCopyOf(buffer);
+    return dummy;
+  }();
+
+  // Run audio source, but drop generated samples.
+  fillBuffer(dummyBuffer, midiMessages);
+}
+
+void PluginProcessor::fillBuffer(juce::AudioBuffer<float>& buffer,
+                                 juce::MidiBuffer& midiMessages) {
   juce::ScopedNoDenormals noDenormals;
 
-  buffer.clear(0, buffer.getNumSamples());
+  if (!resampler_) {
+    return;
+  }
 
   {
     // Reflect parameter changes modified by sliders.
@@ -327,10 +350,6 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
       audioSource_->triggerReservedChanges();
     }
-  }
-
-  if (!resampler_) {
-    return;
   }
 
   int sampleStartPosition{};
