@@ -173,6 +173,10 @@ std::deque<NoteAssignment> Keyboard::forceAllNoteOff() {
                                                   assignment.note.noteNumber)}};
       });
   noteOnQueue_.clear();
+
+  assignableIdQueue_.resize(polyphony_);
+  std::iota(std::begin(assignableIdQueue_), std::end(assignableIdQueue_), 0u);
+
   return noteOffQueue;
 }
 }  // namespace audio
