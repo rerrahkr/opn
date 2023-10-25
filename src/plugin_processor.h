@@ -70,6 +70,11 @@ class PluginProcessor : public juce::AudioProcessor {
   void reserveParameterChange(
       const audio::parameter::ParameterVariant& parameter);
 
+  /**
+   * @brief Reset audio source.
+   */
+  void resetAudioSource() noexcept { shouldResetAudioSource_.store(true); }
+
  private:
   //============================================================================
 
@@ -92,6 +97,9 @@ class PluginProcessor : public juce::AudioProcessor {
 
   /// Queue storing notifications of parameter change.
   audio::parameter::ParameterChangeQueue parameterChangeQueue_;
+
+  /// Flag that an audio source should be reset.
+  std::atomic_bool shouldResetAudioSource_;
 
   /**
    * @brief Fill generated samples to given buffer.

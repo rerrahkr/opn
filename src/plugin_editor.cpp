@@ -46,6 +46,11 @@ PluginEditor::PluginEditor(
     return labeledSlider;
   };
 
+  // Panic button.
+  panicButton_ = std::make_unique<juce::TextButton>("Panic!");
+  panicButton_->onClick = [&processor] { processor.resetAudioSource(); };
+  addAndMakeVisible(panicButton_.get());
+
   // Pitch bend sensitivity.
   pitchBendSensitivityPair_ = makeLabeledSlider(
       ap::idAsString(ap::PluginParameter::PitchBendSensitivity),
@@ -143,23 +148,25 @@ void PluginEditor::resized() {
 
   // Left area.
   {
-    const auto pluginParamsArea = leftArea.removeFromTop(kRowHeight);
-    ui::NestableGrid pluginParamsGrid;
-    pluginParamsGrid.setTemplateColumns({1_fr, 1_fr});
-    pluginParamsGrid.setTemplateRows({1_fr});
-    pluginParamsGrid.setItems({pitchBendSensitivityPair_->label.get(),
-                               pitchBendSensitivityPair_->slider.get()});
-    pluginParamsGrid.performLayout(pluginParamsArea);
+    const auto buttonArea = leftArea.removeFromTop(kRowHeight);
+    ui::NestableGrid buttonGrid;
+    buttonGrid.setTemplateColumns({1_fr, 1_fr});
+    buttonGrid.setTemplateRows({1_fr});
+
+    buttonGrid.setItems({panicButton_.get(), {}});
+    buttonGrid.performLayout(buttonArea);
   }
 
   {
-    const auto toneParamsArea = leftArea.removeFromTop(kRowHeight * 2);
-    ui::NestableGrid toneParamsGrid;
-    toneParamsGrid.setTemplateColumns({1_fr, 1_fr});
-    toneParamsGrid.setTemplateRows({1_fr, 1_fr});
-    toneParamsGrid.setItems({alPair_->label.get(), alPair_->slider.get(),
-                             fbPair_->label.get(), fbPair_->slider.get()});
-    toneParamsGrid.performLayout(toneParamsArea);
+    const auto paramsArea = leftArea.removeFromTop(kRowHeight * 3);
+    ui::NestableGrid paramsGrid;
+    paramsGrid.setTemplateColumns({1_fr, 1_fr});
+    paramsGrid.setTemplateRows({1_fr, 1_fr, 1_fr});
+    paramsGrid.setItems({pitchBendSensitivityPair_->label.get(),
+                         pitchBendSensitivityPair_->slider.get(),
+                         alPair_->label.get(), alPair_->slider.get(),
+                         fbPair_->label.get(), fbPair_->slider.get()});
+    paramsGrid.performLayout(paramsArea);
   }
 
   {

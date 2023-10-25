@@ -63,6 +63,11 @@ class FmAudioSource : public juce::AudioSource {
   void getNextAudioBlock(
       const juce::AudioSourceChannelInfo& bufferToFill) override;
 
+  /**
+   * @brief Reset internal state.
+   */
+  void reset();
+
   // [Changes] -----------------------------------------------------------------
   /**
    * @brief Try to reserve parameter change.

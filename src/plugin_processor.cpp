@@ -334,6 +334,10 @@ void PluginProcessor::fillBuffer(juce::AudioBuffer<float>& buffer,
     return;
   }
 
+  if (shouldResetAudioSource_.exchange(false)) {
+    audioSource_->reset();
+  }
+
   {
     // Reflect parameter changes modified by sliders.
     std::lock_guard guard{parameterQueueMutex_};

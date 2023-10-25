@@ -133,22 +133,9 @@ double FmAudioSource::synthesisRate() const { return kChipClockHz / 144; }
 
 void FmAudioSource::prepareToPlay(int samplesPerBlockExpected,
                                   double /*sampleRate*/) {
-  ym2608_->reset();
-
-  {
-    const std::lock_guard guard(reservedChangesMutex_);
-
-    // Initialise interruption / YM2608 mode
-    reservedChanges_.emplace_back(0x29u, 0x80u);
-  }
-
-  reserveUpdatingAllToneParameter();
-
-  triggerReservedChanges();
+  reset();
 
   outputDataBuffer_.resize(samplesPerBlockExpected);
-
-  rpnDetector_.reset();
 }
 
 void FmAudioSource::getNextAudioBlock(
@@ -186,6 +173,27 @@ void FmAudioSource::getNextAudioBlock(
           });
     }
   }
+}
+
+void FmAudioSource::reset() {
+  ym2608_->reset();
+
+  for (const auto& assignment : keyboard_.forceAllNoteOff()) {
+    reserveNoteOff(assignment);
+  }
+
+  {
+    const std::lock_guard guard(reservedChangesMutex_);
+
+    // Initialise interruption / YM2608 mode
+    reservedChanges_.emplace_back(0x29u, 0x80u);
+  }
+
+  reserveUpdatingAllToneParameter();
+
+  triggerReservedChanges();
+
+  rpnDetector_.reset();
 }
 
 // [Changes] -------------------------------------------------------------------

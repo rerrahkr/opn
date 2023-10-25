@@ -49,6 +49,9 @@ class PluginEditor : public juce::AudioProcessorEditor {
   std::weak_ptr<PluginStore<PluginState, PluginAction>> store_;
 
   // [Control] -----------------------------------------------------------------
+  // Panic button.
+  std::unique_ptr<juce::TextButton> panicButton_;
+
   // Label and slider pairs.
   std::unique_ptr<ui::LabeledSliderWithAttachment> pitchBendSensitivityPair_;
   std::unique_ptr<ui::LabeledSliderWithAttachment> alPair_, fbPair_;
@@ -59,7 +62,7 @@ class PluginEditor : public juce::AudioProcessorEditor {
   // Tabbed component of FM operator parameters.
   std::unique_ptr<ui::FmOperatorParametersTabbedComponent> fmOperatorParamsTab_;
 
-  // Envelope graph/
+  // Envelope graph.
   std::shared_ptr<ui::EnvelopeGraph> envelopeGraph_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
