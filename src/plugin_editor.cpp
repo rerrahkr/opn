@@ -11,6 +11,7 @@
 
 #include "apvts_attachment.h"
 #include "plugin_processor.h"
+#include "ui/colour.h"
 #include "ui/envelope_graph.h"
 #include "ui/fm_operator_parameters_tab_content.h"
 #include "ui/fm_operator_parameters_tabbed_component.h"
@@ -102,16 +103,11 @@ PluginEditor::PluginEditor(
             }
           });
   for (std::size_t slot = 0; slot < audio::kSlotCount; ++slot) {
-    constexpr auto kLightness{.3f}, kAlpha{1.f};
-    static const juce::Colour backColours[]{
-        juce::Colour::fromHSL(.42f, .30f, kLightness, kAlpha),
-        juce::Colour::fromHSL(.83f, .30f, kLightness, kAlpha),
-        juce::Colour::fromHSL(.60f, .30f, kLightness, kAlpha),
-        juce::Colour::fromHSL(.13f, .30f, kLightness, kAlpha)};
     auto&& content =
         std::make_unique<ui::FmOperatorParametersTabContent>(slot, parameters);
     fmOperatorParamsTab_->addTab("Op." + juce::String(slot + 1u),
-                                 backColours[slot], content.release(), true);
+                                 ui::colour::tab::kSlot[slot],
+                                 content.release(), true);
   }
   addAndMakeVisible(fmOperatorParamsTab_.get());
 

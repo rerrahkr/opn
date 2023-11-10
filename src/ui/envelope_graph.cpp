@@ -12,28 +12,11 @@
 #include <vector>
 
 #include "../util.h"
+#include "colour.h"
 
 namespace ui {
 namespace {
 namespace ap = audio::parameter;
-
-namespace colour {
-constexpr float kLineAlpha{.75f}, kNodeFillAlpha{.1f};
-constexpr float kLineFrontLightness{.54f}, kLineBackLightness{.30f};
-constexpr float kEnvelopeFillGradientOpacityMultiply{.2f};
-
-const juce::Colour kLink[audio::kSlotCount]{
-    juce::Colour::fromHSL(.42f, .70f, kLineFrontLightness, kLineAlpha),
-    juce::Colour::fromHSL(.83f, .70f, kLineFrontLightness, kLineAlpha),
-    juce::Colour::fromHSL(.60f, .70f, kLineFrontLightness, kLineAlpha),
-    juce::Colour::fromHSL(.13f, .70f, kLineFrontLightness, kLineAlpha)};
-const auto kBackground = juce::Colour::fromHSL(0.f, 0.f, .12f, 1.f);
-const juce::Colour kNodeFill[audio::kSlotCount]{
-    kLink[0].withAlpha(kNodeFillAlpha), kLink[1].withAlpha(kNodeFillAlpha),
-    kLink[2].withAlpha(kNodeFillAlpha), kLink[3].withAlpha(kNodeFillAlpha)};
-const juce::Colour kNodeBorder[audio::kSlotCount]{kLink[0], kLink[1], kLink[2],
-                                                  kLink[3]};
-}  // namespace colour
 
 namespace stroke_thickness {
 constexpr float kFrontLink{2.f};
@@ -94,8 +77,10 @@ EnvelopeGraph::EnvelopeGraph(juce::AudioProcessorValueTreeState& parameters)
     : parameters_(parameters) {
   for (std::size_t slot = 0u; slot < audio::kSlotCount; ++slot) {
     for (std::size_t i : {3u, 2u, 1u, 0u}) {
+      const auto& slotColour = colour::graph::kSlot[slot];
       auto controller = std::make_unique<ControlPoint>(
-          colour::kNodeFill[slot], colour::kNodeBorder[slot]);
+          slotColour.withAlpha(colour::graph::kSlotFillAlpha),
+          slotColour.withAlpha(colour::graph::kSlotStrokeAlpha));
       controller->setSize(kControllerSize, kControllerSize);
       addChildComponent(controller.get());
       controllers_[slot][i] = std::move(controller);
@@ -528,7 +513,7 @@ void EnvelopeGraph::updateTopLeftPositionOfController4(
 
 void EnvelopeGraph::paint(juce::Graphics& graphics) {
   // Background.
-  graphics.fillAll(colour::kBackground);
+  graphics.fillAll(colour::graph::kBackground);
 
   // Flip y-axis for convenience.
   const auto flipYAxis =
@@ -578,10 +563,12 @@ void EnvelopeGraph::paint(juce::Graphics& graphics) {
       envelopePath.lineTo(outerPoint.withY(0.f));
     }
 
-    const auto linkColour =
-        (controllers == visibleControllers_)
-            ? colour::kLink[slot]
-            : colour::kLink[slot].withLightness(colour::kLineBackLightness);
+    const auto linkColour = [&] {
+      auto c = colour::graph::kSlot[slot];
+      return (controllers == visibleControllers_)
+                 ? c
+                 : c.withLightness(colour::graph::kBackLightness);
+    }();
     graphics.setColour(linkColour);
     graphics.strokePath(envelopePath, juce::PathStrokeType{strokeThickness});
 
@@ -591,9 +578,10 @@ void EnvelopeGraph::paint(juce::Graphics& graphics) {
 
     const auto gradientColour = [linkColour,
                                  y = static_cast<float>(points[0].y)] {
-      auto gradient = juce::ColourGradient::vertical(colour::kBackground, 0.f,
-                                                     linkColour, y);
-      gradient.multiplyOpacity(colour::kEnvelopeFillGradientOpacityMultiply);
+      auto gradient = juce::ColourGradient::vertical(colour::graph::kBackground,
+                                                     0.f, linkColour, y);
+      gradient.multiplyOpacity(
+          colour::graph::kEnvelopeFillGradientOpacityMultiply);
       return gradient;
     }();
     graphics.setGradientFill(gradientColour);
