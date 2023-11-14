@@ -3,9 +3,7 @@
     <g>
         <rect x="25.5" y="60" width="65" height="40" fill="#ffcccc" stroke="#ff0000" stroke-width="2" pointer-events="all"/>
         <g transform="translate(-0.5 -0.5)">
-            <text x="58" y="89" fill="#ff0000" font-family="Helvetica" font-size="24px" text-anchor="middle">
-                1
-            </text>
+            <text x="58" y="89" fill="#ff0000" font-family="Helvetica" font-size="24px" text-anchor="middle">1</text>
         </g>
         <path d="M 41.75 59 L 41.75 50 L 35.5 50 L 8 50 L 8 80 L 16.5 80" fill="none" stroke="#ff0000" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
         <path d="M 24.5 80 L 16.5 84 L 16.5 76 Z" fill="#ff0000" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
@@ -17,25 +15,19 @@
         <path d="M 124.5 141 L 116.5 145 L 116.5 137 Z" fill="#ff0000" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
         <rect x="125.5" y="1" width="65" height="40" fill="#ffe6cc" stroke="#ff8000" stroke-width="2" pointer-events="all"/>
         <g transform="translate(-0.5 -0.5)">
-            <text x="158" y="29" fill="#ff8000" font-family="Helvetica" font-size="24px" text-anchor="middle">
-                2
-            </text>
+            <text x="158" y="29" fill="#ff8000" font-family="Helvetica" font-size="24px" text-anchor="middle">2</text>
         </g>
         <path d="M 191.5 21 L 240.5 21 L 240.5 56" fill="none" stroke="#ff8000" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
         <path d="M 240.5 64 L 236.5 56 L 244.5 56 Z" fill="#ff8000" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
         <rect x="125.5" y="60" width="65" height="40" fill="#ffffcc" stroke="#ffff00" stroke-width="2" pointer-events="all"/>
         <g transform="translate(-0.5 -0.5)">
-            <text x="158" y="89" fill="#ffff00" font-family="Helvetica" font-size="24px" text-anchor="middle">
-                3
-            </text>
+            <text x="158" y="89" fill="#ffff00" font-family="Helvetica" font-size="24px" text-anchor="middle">3</text>
         </g>
         <path d="M 191.5 80 L 216.5 80" fill="none" stroke="#ffff00" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
         <path d="M 224.5 80 L 216.5 84 L 216.5 76 Z" fill="#ffff00" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
         <rect x="125.5" y="121" width="65" height="40" fill="#e6ffcc" stroke="#80ff00" stroke-width="2" pointer-events="all"/>
         <g transform="translate(-0.5 -0.5)">
-            <text x="158" y="150" fill="#80ff00" font-family="Helvetica" font-size="24px" text-anchor="middle">
-                4
-            </text>
+            <text x="158" y="150" fill="#80ff00" font-family="Helvetica" font-size="24px" text-anchor="middle">4</text>
         </g>
         <path d="M 191.5 141 L 240.5 141 L 240.5 104" fill="none" stroke="#80ff00" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
         <path d="M 240.5 96 L 244.5 104 L 236.5 104 Z" fill="#80ff00" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
