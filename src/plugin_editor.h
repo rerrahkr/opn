@@ -22,6 +22,7 @@
 class PluginProcessor;
 
 namespace ui {
+class AlgorithmGraph;
 class EnvelopeGraph;
 class FmOperatorParametersTabbedComponent;
 }  // namespace ui
@@ -64,6 +65,9 @@ class PluginEditor : public juce::AudioProcessorEditor {
 
   // Envelope graph.
   std::shared_ptr<ui::EnvelopeGraph> envelopeGraph_;
+
+  // Algorithm graph.
+  std::shared_ptr<ui::AlgorithmGraph> algorithmGraph_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

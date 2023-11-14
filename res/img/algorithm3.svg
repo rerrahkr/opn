@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="332px" height="139px" viewBox="-0.5 -0.5 332 139">
+    <defs/>
+    <g>
+        <rect x="101" y="18" width="65" height="40" fill="#ffcccc" stroke="#ff0000" stroke-width="2" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <text x="134" y="47" fill="#ff0000" font-family="Helvetica" font-size="25px" text-anchor="middle">
+                1
+            </text>
+        </g>
+        <path d="M 117.25 17 L 117.25 8 L 111 8 L 83.5 8 L 83.5 38 L 92 38" fill="none" stroke="#ff0000" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 100 38 L 92 42 L 92 34 Z" fill="#ff0000" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 167 38 L 233.5 38 L 233.5 49" fill="none" stroke="#ff0000" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 233.5 57 L 229.5 49 L 237.5 49 Z" fill="#ff0000" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="1" y="98" width="65" height="40" fill="#ffe6cc" stroke="#ff8000" stroke-width="2" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <text x="34" y="127" fill="#ff8000" font-family="Helvetica" font-size="24px" text-anchor="middle">
+                2
+            </text>
+        </g>
+        <path d="M 67 118 L 92 118" fill="none" stroke="#ff8000" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 100 118 L 92 122 L 92 114 Z" fill="#ff8000" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="101" y="98" width="65" height="40" fill="#ffffcc" stroke="#ffff00" stroke-width="2" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <text x="134" y="127" fill="#ffff00" font-family="Helvetica" font-size="24px" text-anchor="middle">
+                3
+            </text>
+        </g>
+        <path d="M 167 118 L 233.5 118 L 233.5 107" fill="none" stroke="#ffff00" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 233.5 99 L 237.5 107 L 229.5 107 Z" fill="#ffff00" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="201" y="58" width="65" height="40" fill="#e6ffcc" stroke="#80ff00" stroke-width="2" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <text x="234" y="87" fill="#80ff00" font-family="Helvetica" font-size="24px" text-anchor="middle">
+                4
+            </text>
+        </g>
+        <path d="M 267 78 L 292 78" fill="none" stroke="#80ff00" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 300 78 L 292 82 L 292 74 Z" fill="#80ff00" stroke="none" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <ellipse cx="316" cy="78" rx="15" ry="15" fill="#e6e6e6" stroke="#000000" stroke-width="2" pointer-events="all"/>
+    </g>
+</svg>

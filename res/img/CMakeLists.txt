@@ -1,0 +1,10 @@
+juce_add_binary_data(res_img
+    SOURCES
+    algorithm1.svg
+    algorithm2.svg
+    algorithm3.svg
+    algorithm4.svg
+    algorithm5.svg
+    algorithm6.svg
+    algorithm7.svg
+    algorithm8.svg)

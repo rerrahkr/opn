@@ -36,11 +36,13 @@ target_compile_options(${PROJECT_TARGET} PRIVATE ${COMPILE_FLAGS})
 
 # target_include_directories(${PROJECT_TARGET} PRIVATE include)
 
+add_subdirectory(res/img)
 add_subdirectory(lib/ymfm)
 
 target_link_libraries(${PROJECT_TARGET}
     PRIVATE
         juce::juce_audio_utils
+        res_img
         ymfm
     PUBLIC
         juce::juce_recommended_config_flags

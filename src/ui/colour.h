@@ -20,6 +20,17 @@ inline const juce::Colour kSlot[audio::kSlotCount]{
     juce::Colour::fromHSL(.13f, .70f, .54f, 1.f)};
 
 inline const auto kBackground = juce::Colour::fromHSL(0.f, 0.f, .12f, 1.f);
+
+namespace algorithm {
+inline const juce::Colour kSvgFillSlot[audio::kSlotCount]{
+    juce::Colour{0xffffcccc}, juce::Colour{0xffffe6cc},
+    juce::Colour{0xffffffcc}, juce::Colour{0xffe6ffcc}};
+inline const juce::Colour kSvgStrokeSlot[audio::kSlotCount]{
+    juce::Colour{0xffff0000}, juce::Colour{0xffff8000},
+    juce::Colour{0xffffff00}, juce::Colour{0xff80ff00}};
+inline const juce::Colour kSvgStrokeOut{0xff000000}, kSvgFillOut{0xffe6e6e6};
+inline const auto kOut = juce::Colour::fromHSL(0.f, 0.f, 0.7f, 1.f);
+}  // namespace algorithm
 }  // namespace graph
 
 namespace tab {

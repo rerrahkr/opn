@@ -11,6 +11,7 @@
 
 #include "apvts_attachment.h"
 #include "plugin_processor.h"
+#include "ui/algorithm_graph.h"
 #include "ui/colour.h"
 #include "ui/envelope_graph.h"
 #include "ui/fm_operator_parameters_tab_content.h"
@@ -33,6 +34,10 @@ PluginEditor::PluginEditor(
           }
         });
   }
+
+  // Algorithm graph.
+  algorithmGraph_ = std::make_shared<ui::AlgorithmGraph>(parameters);
+  addAndMakeVisible(algorithmGraph_.get());
 
   namespace ap = audio::parameter;
 
@@ -62,6 +67,13 @@ PluginEditor::PluginEditor(
   alPair_ =
       makeLabeledSlider(ap::idAsString(ap::FmToneParameter::Al), "Algorithm",
                         juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft);
+  apvtsUiAttachments_.emplace_back(std::make_unique<ApvtsAttachmentForUi>(
+      parameters, ap::idAsString(ap::FmToneParameter::Al),
+      [weakGraph = std::weak_ptr(algorithmGraph_)](float /*newValue*/) {
+        if (auto graph = weakGraph.lock()) {
+          graph->update();
+        }
+      }));
 
   // Feedback.
   fbPair_ = makeLabeledSlider(ap::idAsString(ap::FmToneParameter::Fb),
@@ -111,8 +123,8 @@ PluginEditor::PluginEditor(
   }
   addAndMakeVisible(fmOperatorParamsTab_.get());
 
-  setSize(800, 400);
-  setResizeLimits(600, 400, std::numeric_limits<int>::max(),
+  setSize(700, 400);
+  setResizeLimits(700, 400, std::numeric_limits<int>::max(),
                   std::numeric_limits<int>::max());
   setResizable(true, false);
   resized();
@@ -144,16 +156,6 @@ void PluginEditor::resized() {
 
   // Left area.
   {
-    const auto buttonArea = leftArea.removeFromTop(kRowHeight);
-    ui::NestableGrid buttonGrid;
-    buttonGrid.setTemplateColumns({1_fr, 1_fr});
-    buttonGrid.setTemplateRows({1_fr});
-
-    buttonGrid.setItems({panicButton_.get(), {}});
-    buttonGrid.performLayout(buttonArea);
-  }
-
-  {
     const auto paramsArea = leftArea.removeFromTop(kRowHeight * 3);
     ui::NestableGrid paramsGrid;
     paramsGrid.setTemplateColumns({1_fr, 1_fr});
@@ -171,6 +173,23 @@ void PluginEditor::resized() {
     fmOperatorParamsTab_->setBounds(fmOperatorParamsTabArea);
   }
 
+  {
+    const auto buttonArea = leftArea.removeFromTop(kRowHeight);
+    ui::NestableGrid buttonGrid;
+    buttonGrid.setTemplateColumns({1_fr, 1_fr});
+    buttonGrid.setTemplateRows({1_fr});
+
+    buttonGrid.setItems({panicButton_.get(), {}});
+    buttonGrid.performLayout(buttonArea);
+  }
+
   // Right area.
+  {
+    constexpr int gap{kRowHeight / 2};
+    const auto algorithmArea =
+        rightArea.removeFromTop(kRowHeight * 7 + gap).withTrimmedBottom(gap);
+    algorithmGraph_->setBounds(algorithmArea);
+  }
+
   envelopeGraph_->setBounds(rightArea);
 }
