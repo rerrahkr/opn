@@ -722,7 +722,8 @@ void FmAudioSource::reserveUpdatingAllToneParameter() {
       writeToBoundOperator(0x60u, op.dr.rawValue());
       writeToBoundOperator(0x70u, op.sr.rawValue());
       writeToBoundOperator(0x80u, (op.sl.rawValue() << 4) | op.rr.rawValue());
-      writeToBoundOperator(0x90, util::to_underlying(op.ssgeg.shape));
+      writeToBoundOperator(
+          0x90u, op.ssgeg.isEnabled ? util::to_underlying(op.ssgeg.shape) : 0u);
     }
 
     writeToBoundChannel(
