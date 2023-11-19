@@ -333,6 +333,8 @@ bool FmAudioSource::tryReserveParameterChange(
   }
 
   const std::uint16_t address = addressOfOperator(slot, 0x60u);
+  const std::uint8_t registerValue =
+      (static_cast<uint8_t>(slotParameters.am) << 7) | value.rawValue();
 
   for (const std::size_t channel : keyboard_.usedAssignIds()) {
     if (kMaxChannelCount <= channel) {
@@ -341,7 +343,7 @@ bool FmAudioSource::tryReserveParameterChange(
     }
 
     reservedChanges_.emplace_back(addressOfChannel(channel, address),
-                                  value.rawValue());
+                                  registerValue);
   }
 
   return true;
@@ -719,7 +721,8 @@ void FmAudioSource::reserveUpdatingAllToneParameter() {
                                      ? parameter::AttackRateValue::kMaximum
                                      : op.ar.rawValue();
       writeToBoundOperator(0x50u, (op.ks.rawValue() << 6) | rawAr);
-      writeToBoundOperator(0x60u, op.dr.rawValue());
+      writeToBoundOperator(
+          0x60u, (static_cast<uint8_t>(op.am) << 7) | op.dr.rawValue());
       writeToBoundOperator(0x70u, op.sr.rawValue());
       writeToBoundOperator(0x80u, (op.sl.rawValue() << 4) | op.rr.rawValue());
       writeToBoundOperator(
